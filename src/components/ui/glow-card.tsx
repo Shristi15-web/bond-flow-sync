@@ -17,11 +17,13 @@ export function GlowCard({ children, className, glowColor = 'primary', hover = t
 
   return (
     <div
+      onClick={onClick}
       className={cn(
         "relative rounded-xl border border-border bg-card/60 backdrop-blur-sm p-6",
         "transition-all duration-300 ease-out",
         hover && "hover:-translate-y-1",
         hover && glowStyles[glowColor],
+        onClick && "cursor-pointer",
         className
       )}
     >
