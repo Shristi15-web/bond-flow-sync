@@ -110,15 +110,12 @@ export default function Landing() {
             )}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Auth Button */}
+          <div className="shrink-0">
             <Link to="/login">
-              <button className="px-4 py-2 text-sm text-foreground hover:text-primary transition-colors hidden sm:block">
-                Login
+              <button className="px-5 py-2.5 text-sm font-medium text-foreground bg-muted/50 border border-border/50 rounded-lg hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all duration-300 ease-in-out hover:scale-[1.02]">
+                Login / Signup
               </button>
-            </Link>
-            <Link to="/login">
-              <GradientButton size="sm">Sign Up</GradientButton>
             </Link>
           </div>
         </div>
