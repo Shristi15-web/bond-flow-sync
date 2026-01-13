@@ -25,7 +25,8 @@ const navItems: Record<UserRole, NavItem[]> = {
   investor: [
     { label: "Dashboard", href: "/investor", icon: <LayoutDashboard className="w-5 h-5" /> },
     { label: "Available Bonds", href: "/investor/bonds", icon: <TrendingUp className="w-5 h-5" /> },
-    { label: "My Portfolio", href: "/investor/portfolio", icon: <Wallet className="w-5 h-5" /> },
+    { label: "My Portfolio", href: "/investor/portfolio", icon: <FileText className="w-5 h-5" /> },
+    { label: "Wallet", href: "/investor/wallet", icon: <Wallet className="w-5 h-5" /> },
     { label: "Transactions", href: "/investor/transactions", icon: <FileText className="w-5 h-5" /> },
   ],
   broker: [
@@ -64,11 +65,12 @@ const roleLabels: Record<UserRole, string> = {
 
 export function DashboardNav() {
   const location = useLocation();
-  const { currentUser, logout } = useBondContext();
+  const { currentUser, logout, investor } = useBondContext();
 
   if (!currentUser) return null;
 
   const items = navItems[currentUser.role];
+  const displayName = currentUser.role === 'investor' ? investor.name : roleLabels[currentUser.role];
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-sidebar backdrop-blur-xl z-50">
@@ -81,7 +83,10 @@ export function DashboardNav() {
             </div>
             <span className="text-xl font-bold text-foreground">BondFi</span>
           </Link>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-sm text-foreground mt-3 font-medium">
+            Welcome, {displayName.split(' ')[0]}
+          </p>
+          <p className="text-xs text-muted-foreground">
             {roleLabels[currentUser.role]}
           </p>
         </div>
@@ -112,8 +117,13 @@ export function DashboardNav() {
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border space-y-1">
           <Link
-            to="/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary transition-all duration-200"
+            to={`/${currentUser.role === 'financial_institution' ? 'fi' : currentUser.role === 'government_partner' ? 'gov' : currentUser.role}/settings`}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+              location.pathname.includes('/settings')
+                ? "bg-sidebar-accent text-sidebar-primary"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary"
+            )}
           >
             <Settings className="w-5 h-5" />
             Settings
