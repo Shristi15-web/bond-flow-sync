@@ -59,6 +59,8 @@ export interface Investor extends User {
   totalInvested: number;
   totalReturns: number;
   purchases: BondPurchase[];
+  country?: string;
+  preferredCurrency?: 'INR' | 'USDT';
 }
 
 export interface Broker extends User {

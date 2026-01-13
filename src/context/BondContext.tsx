@@ -48,6 +48,10 @@ interface BondContextType {
   login: (role: UserRole) => void;
   logout: () => void;
   
+  // Investor Actions
+  updateInvestorProfile: (updates: Partial<Pick<Investor, 'name' | 'country' | 'preferredCurrency'>>) => void;
+  addStablecoins: (amount: number) => void;
+  
   // Actions
   purchaseBond: (bondId: string, amount: number) => void;
   listBond: (bondId: string) => void;
@@ -142,11 +146,48 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   };
 
+  const updateInvestorProfile = (updates: Partial<Pick<Investor, 'name' | 'country' | 'preferredCurrency'>>) => {
+    setInvestor(prev => ({
+      ...prev,
+      ...updates,
+    }));
+  };
+
+  const addStablecoins = (amount: number) => {
+    setInvestor(prev => ({
+      ...prev,
+      balance: prev.balance + amount,
+    }));
+
+    // Add transaction
+    const newTransaction: Transaction = {
+      id: `tx-${Date.now()}`,
+      type: 'purchase',
+      bondId: 'stablecoin',
+      fromId: 'external',
+      toId: investor.id,
+      amount,
+      value: amount,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      description: `Purchased ${amount} USDT stablecoins`,
+    };
+
+    setTransactions(prev => [...prev, newTransaction]);
+  };
+
   const purchaseBond = (bondId: string, amount: number) => {
     const bond = bonds.find(b => b.id === bondId);
     if (!bond || bond.availableSupply < amount) return;
 
     const purchaseValue = (amount / bond.totalSupply) * bond.value * amount;
+    
+    // Check if investor has enough balance
+    if (investor.balance < purchaseValue) {
+      console.warn('Insufficient balance');
+      return;
+    }
+    
     const expectedReturn = (purchaseValue * bond.yield) / 100;
 
     // Update investor
@@ -312,6 +353,8 @@ export function BondProvider({ children }: { children: ReactNode }) {
         currentUser,
         login,
         logout,
+        updateInvestorProfile,
+        addStablecoins,
         purchaseBond,
         listBond,
         createBond,

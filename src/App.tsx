@@ -9,6 +9,11 @@ import Splash from "./pages/Splash";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import InvestorDashboard from "./pages/investor/InvestorDashboard";
+import InvestorBonds from "./pages/investor/InvestorBonds";
+import InvestorPortfolio from "./pages/investor/InvestorPortfolio";
+import InvestorWallet from "./pages/investor/InvestorWallet";
+import InvestorTransactions from "./pages/investor/InvestorTransactions";
+import InvestorSettings from "./pages/investor/InvestorSettings";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import CustodianDashboard from "./pages/custodian/CustodianDashboard";
 import FIDashboard from "./pages/fi/FIDashboard";
@@ -28,8 +33,14 @@ const App = () => (
             <Route path="/" element={<Splash />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            {/* Investor Routes */}
             <Route path="/investor" element={<InvestorDashboard />} />
-            <Route path="/investor/*" element={<InvestorDashboard />} />
+            <Route path="/investor/bonds" element={<InvestorBonds />} />
+            <Route path="/investor/portfolio" element={<InvestorPortfolio />} />
+            <Route path="/investor/wallet" element={<InvestorWallet />} />
+            <Route path="/investor/transactions" element={<InvestorTransactions />} />
+            <Route path="/investor/settings" element={<InvestorSettings />} />
+            {/* Other Role Routes */}
             <Route path="/broker" element={<BrokerDashboard />} />
             <Route path="/broker/*" element={<BrokerDashboard />} />
             <Route path="/custodian" element={<CustodianDashboard />} />
