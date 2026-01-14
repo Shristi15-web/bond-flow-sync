@@ -115,7 +115,16 @@ export function BondProvider({ children }: { children: ReactNode }) {
   const [complianceMetrics, setComplianceMetrics] = useState<ComplianceMetrics>(
     stored?.complianceMetrics || initialComplianceMetrics
   );
-  const [currentUser, setCurrentUser] = useState<{ role: UserRole; id: string } | null>(null);
+  // Load persisted user session
+  const [currentUser, setCurrentUser] = useState<{ role: UserRole; id: string } | null>(() => {
+    try {
+      const session = localStorage.getItem('bondfi_session');
+      if (session) {
+        return JSON.parse(session);
+      }
+    } catch {}
+    return null;
+  });
 
   // Persist to localStorage whenever data changes
   useEffect(() => {
@@ -139,11 +148,15 @@ export function BondProvider({ children }: { children: ReactNode }) {
       financial_institution: 'fi-001',
       government_partner: 'gov-001',
     };
-    setCurrentUser({ role, id: userIds[role] });
+    const user = { role, id: userIds[role] };
+    setCurrentUser(user);
+    // Persist session to localStorage
+    localStorage.setItem('bondfi_session', JSON.stringify(user));
   };
 
   const logout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('bondfi_session');
   };
 
   const updateInvestorProfile = (updates: Partial<Pick<Investor, 'name' | 'country' | 'preferredCurrency'>>) => {

@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { BondCard } from "@/components/ui/bond-card";
@@ -6,6 +7,7 @@ import { useBondContext } from "@/context/BondContext";
 import { TrendingUp, FileText, Users, DollarSign, ArrowRight, Activity, BarChart3 } from "lucide-react";
 
 export default function BrokerDashboard() {
+  const navigate = useNavigate();
   const { broker, bonds, transactions, listBond } = useBondContext();
   const availableBonds = bonds.filter(b => b.status === 'available');
   const listedBonds = bonds.filter(b => broker.listedBonds.includes(b.id));
@@ -19,7 +21,10 @@ export default function BrokerDashboard() {
     <DashboardLayout title="Broker Dashboard" subtitle="Manage bond listings and investor demand">
       {/* Stats with listing-focused design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-primary/5 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)] transition-all duration-300 group">
+        <div 
+          onClick={() => navigate('/broker/listings')}
+          className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-primary/5 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)] transition-all duration-300 group cursor-pointer"
+        >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/20 to-transparent rounded-bl-full" />
           <FileText className="w-5 h-5 text-primary mb-3" />
           <p className="text-sm text-muted-foreground">Listed Bonds</p>
@@ -27,6 +32,7 @@ export default function BrokerDashboard() {
           <p className="text-xs text-success mt-2 flex items-center gap-1">
             <TrendingUp className="w-3 h-3" /> +{todayListings} today
           </p>
+          <p className="text-xs text-primary mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to view details →</p>
         </div>
         
         <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-success/5 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--success)/0.15)] transition-all duration-300 group">
@@ -39,20 +45,28 @@ export default function BrokerDashboard() {
           </p>
         </div>
         
-        <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-secondary/5 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--secondary)/0.15)] transition-all duration-300 group">
+        <div 
+          onClick={() => navigate('/broker/investors')}
+          className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-secondary/5 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--secondary)/0.15)] transition-all duration-300 group cursor-pointer"
+        >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-secondary/20 to-transparent rounded-bl-full" />
           <Users className="w-5 h-5 text-secondary mb-3" />
           <p className="text-sm text-muted-foreground">Active Investors</p>
           <p className="text-3xl font-bold text-foreground mt-1">1,247</p>
           <p className="text-xs text-muted-foreground mt-2">Across all listings</p>
+          <p className="text-xs text-primary mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to view details →</p>
         </div>
         
-        <div className="relative overflow-hidden rounded-xl border border-warning/30 bg-gradient-to-br from-warning/10 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--warning)/0.15)] transition-all duration-300 group animate-pulse-slow">
+        <div 
+          onClick={() => navigate('/broker/demand')}
+          className="relative overflow-hidden rounded-xl border border-warning/30 bg-gradient-to-br from-warning/10 to-card p-5 hover:shadow-[0_0_30px_hsl(var(--warning)/0.15)] transition-all duration-300 group animate-pulse-slow cursor-pointer"
+        >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-warning/20 to-transparent rounded-bl-full" />
           <Activity className="w-5 h-5 text-warning mb-3" />
           <p className="text-sm text-muted-foreground">Pending Demands</p>
           <p className="text-3xl font-bold text-foreground mt-1">{pendingDemands}</p>
           <p className="text-xs text-warning mt-2">Requires attention</p>
+          <p className="text-xs text-primary mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to view details →</p>
         </div>
       </div>
 
@@ -124,7 +138,8 @@ export default function BrokerDashboard() {
             {listedBonds.length > 0 ? listedBonds.slice(0, 4).map((bond, index) => (
               <div 
                 key={bond.id}
-                className="p-4 rounded-xl bg-card/60 border border-border/30 hover:border-success/30 transition-all duration-300 group"
+                onClick={() => navigate('/broker/listings')}
+                className="p-4 rounded-xl bg-card/60 border border-border/30 hover:border-success/30 transition-all duration-300 group cursor-pointer"
               >
                 <div className="flex justify-between items-start">
                   <div>
