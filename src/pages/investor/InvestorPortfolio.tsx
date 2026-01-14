@@ -1,10 +1,16 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBondContext } from "@/context/BondContext";
-import { Wallet, TrendingUp, PiggyBank, Calendar, Coins } from "lucide-react";
+import { Wallet, TrendingUp, PiggyBank, Calendar, Coins, ChevronDown, ChevronUp } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
+import { useState } from "react";
 
 export default function InvestorPortfolio() {
   const { investor, getBondById } = useBondContext();
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  const toggleCard = (purchaseId: string) => {
+    setExpandedCard(expandedCard === purchaseId ? null : purchaseId);
+  };
 
   return (
     <DashboardLayout title="My Portfolio" subtitle="Track your bond investments and holdings">
@@ -56,36 +62,106 @@ export default function InvestorPortfolio() {
           <div className="space-y-4">
             {investor.purchases.map((purchase) => {
               const bond = getBondById(purchase.bondId);
+              const isExpanded = expandedCard === purchase.id;
+              
               return bond ? (
                 <div 
                   key={purchase.id} 
-                  className="p-5 rounded-xl bg-muted/20 border border-border/30 hover:border-primary/30 hover:bg-muted/30 transition-all duration-300 group"
+                  className={`rounded-xl bg-muted/20 border transition-all duration-300 cursor-pointer overflow-hidden ${
+                    isExpanded 
+                      ? 'border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.15)]' 
+                      : 'border-border/30 hover:border-primary/30 hover:bg-muted/30'
+                  }`}
+                  onClick={() => toggleCard(purchase.id)}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="font-semibold text-foreground text-lg group-hover:text-primary transition-colors">{bond.name}</p>
-                      <p className="text-sm text-muted-foreground">{bond.issuer}</p>
+                  {/* Compact Card (Always Visible) */}
+                  <div className="p-5">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center">
+                          <Coins className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-lg">{bond.name}</p>
+                          <p className="text-sm text-muted-foreground">{bond.issuer}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Invested</p>
+                          <p className="font-semibold text-foreground">${purchase.purchasePrice.toLocaleString()}</p>
+                        </div>
+                        <div className="text-right hidden sm:block">
+                          <p className="text-sm text-muted-foreground">Returns</p>
+                          <p className="font-semibold text-success">+${purchase.expectedReturn.toFixed(2)}</p>
+                        </div>
+                        <div className={`p-2 rounded-full bg-muted/50 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-success bg-success/10 px-3 py-1 rounded-full">
-                      +${purchase.expectedReturn.toFixed(2)} expected
-                    </span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Invested</p>
-                      <p className="text-foreground font-medium">${purchase.purchasePrice.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Units</p>
-                      <p className="text-foreground font-medium">{purchase.amount}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Purchase Date</p>
-                      <p className="text-foreground font-medium">{purchase.purchaseDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Maturity</p>
-                      <p className="text-foreground font-medium">{purchase.maturityDate}</p>
+
+                  {/* Expanded Details */}
+                  <div 
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isExpanded 
+                        ? 'grid-rows-[1fr] opacity-100' 
+                        : 'grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-5 pb-5 pt-0 border-t border-border/30">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-5">
+                          <div className="p-3 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground mb-1">Bond Name</p>
+                            <p className="text-foreground font-medium">{bond.name}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground mb-1">Quantity</p>
+                            <p className="text-foreground font-medium">{purchase.amount} units</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground mb-1">Invested Amount</p>
+                            <p className="text-foreground font-medium">${purchase.purchasePrice.toLocaleString()}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-success/10">
+                            <p className="text-xs text-muted-foreground mb-1">Returns Earned</p>
+                            <p className="text-success font-medium">+${purchase.expectedReturn.toFixed(2)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground mb-1">Maturity Date</p>
+                            <p className="text-foreground font-medium">{purchase.maturityDate}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-primary/10">
+                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                            <p className="text-primary font-medium">Active</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/10">
+                          <div className="flex flex-wrap justify-between items-center gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Purchase Date</p>
+                              <p className="text-foreground font-medium">{purchase.purchaseDate}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Annual Yield</p>
+                              <p className="text-primary font-bold text-lg">{bond.yield}%</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Tenure</p>
+                              <p className="text-foreground font-medium">{bond.tenure} months</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Total Value at Maturity</p>
+                              <p className="text-success font-bold text-lg">
+                                ${(purchase.purchasePrice + purchase.expectedReturn).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

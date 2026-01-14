@@ -138,8 +138,9 @@ export default function Login() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedRole) {
-      setAuthProgress(0);
-      setStep('authenticating');
+      // Login: directly authenticate without waiting screen
+      login(selectedRole);
+      navigateToDashboard(selectedRole);
     }
   };
 
