@@ -4,15 +4,15 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBondContext } from "@/context/BondContext";
 import { Plus, FileText, CheckCircle, AlertCircle, Loader2, ArrowRight, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 type Step = 'select' | 'configure' | 'validate' | 'processing' | 'success';
 
 export default function BrokerCreateListing() {
-  const { bonds, listBond } = useBondContext();
+  const { bonds, listBond, hasOverlappingListing } = useBondContext();
   const availableBonds = bonds.filter(b => b.status === 'available');
 
   const [step, setStep] = useState<Step>('select');
@@ -65,6 +65,13 @@ export default function BrokerCreateListing() {
         errors.push('End date must be after start date');
       }
     }
+    
+    // Check for overlapping listings
+    if (selectedBondId && listingConfig.listingStartDate && listingConfig.listingEndDate) {
+      if (hasOverlappingListing(selectedBondId, listingConfig.listingStartDate, listingConfig.listingEndDate)) {
+        errors.push('This bond already has an active listing with overlapping dates');
+      }
+    }
 
     setValidationErrors(errors);
     
@@ -76,11 +83,30 @@ export default function BrokerCreateListing() {
   const handlePublish = () => {
     setStep('processing');
     
-    // Simulate processing
+    // Simulate processing delay
     setTimeout(() => {
-      listBond(selectedBondId);
-      setStep('success');
-    }, 3000);
+      const result = listBond(selectedBondId, {
+        minInvestmentUnit: listingConfig.minInvestmentUnit,
+        availableQuantity: listingConfig.availableQuantity,
+        listingStartDate: listingConfig.listingStartDate,
+        listingEndDate: listingConfig.listingEndDate,
+      });
+
+      if (result.success) {
+        setStep('success');
+        toast({
+          title: "Listing Published Successfully",
+          description: "The bond is now visible to investors in the Available Bonds section.",
+        });
+      } else {
+        setStep('validate');
+        toast({
+          title: "Publish Failed",
+          description: result.error || "Unable to publish listing. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, 2000);
   };
 
   const resetForm = () => {
@@ -94,6 +120,15 @@ export default function BrokerCreateListing() {
     });
     setValidationErrors([]);
   };
+
+  // Check if publish button should be enabled
+  const isValidForPublish = 
+    selectedBondId && 
+    listingConfig.availableQuantity > 0 &&
+    listingConfig.minInvestmentUnit > 0 &&
+    listingConfig.listingStartDate &&
+    listingConfig.listingEndDate &&
+    new Date(listingConfig.listingEndDate) > new Date(listingConfig.listingStartDate);
 
   return (
     <DashboardLayout title="Create Listing" subtitle="Publish bonds for investor purchase">
@@ -210,6 +245,29 @@ export default function BrokerCreateListing() {
               </div>
             </div>
 
+            {/* Selected Bond Summary */}
+            <div className="p-4 rounded-xl bg-muted/20 border border-border/30 mb-6">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Selected Bond Summary</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Bond Name:</span>
+                  <span className="ml-2 text-foreground font-medium">{selectedBond.name}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Issuer:</span>
+                  <span className="ml-2 text-foreground">{selectedBond.issuer}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Yield:</span>
+                  <span className="ml-2 text-success font-semibold">{selectedBond.yield}%</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Tenure:</span>
+                  <span className="ml-2 text-foreground">{selectedBond.tenure} months</span>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -262,10 +320,10 @@ export default function BrokerCreateListing() {
               </div>
 
               {validationErrors.length > 0 && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 space-y-2">
                   {validationErrors.map((error, i) => (
                     <p key={i} className="text-sm text-destructive flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
                       {error}
                     </p>
                   ))}
@@ -329,7 +387,11 @@ export default function BrokerCreateListing() {
               <Button variant="outline" onClick={() => setStep('configure')}>
                 Back
               </Button>
-              <Button onClick={handlePublish} className="gap-2 bg-success hover:bg-success/90">
+              <Button 
+                onClick={handlePublish} 
+                className="gap-2 bg-success hover:bg-success/90"
+                disabled={!isValidForPublish}
+              >
                 <TrendingUp className="w-4 h-4" />
                 Publish Listing
               </Button>
@@ -352,7 +414,7 @@ export default function BrokerCreateListing() {
             <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-8 h-8 text-success" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Listing Published!</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Listing Published Successfully!</h2>
             <p className="text-muted-foreground mb-6">
               {selectedBond.name} is now available for investor purchase.
             </p>

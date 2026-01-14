@@ -8,7 +8,7 @@ import { TrendingUp, FileText, Users, DollarSign, ArrowRight, Activity, BarChart
 
 export default function BrokerDashboard() {
   const navigate = useNavigate();
-  const { broker, bonds, transactions, listBond } = useBondContext();
+  const { broker, bonds, transactions } = useBondContext();
   const availableBonds = bonds.filter(b => b.status === 'available');
   const listedBonds = bonds.filter(b => broker.listedBonds.includes(b.id));
   const recentTx = transactions.filter(t => t.toId === broker.id || t.fromId === broker.id).slice(-5).reverse();
@@ -104,8 +104,8 @@ export default function BrokerDashboard() {
                   minInvestment={bond.minInvestment} 
                   availableSupply={bond.availableSupply} 
                   status={bond.status} 
-                  actionLabel="List for Investors" 
-                  onAction={() => listBond(bond.id)} 
+                  actionLabel="Create Listing" 
+                  onAction={() => navigate('/broker/create')} 
                 />
               </div>
             )) : (
