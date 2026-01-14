@@ -67,7 +67,7 @@ interface BondContextType {
   // Actions
   purchaseBond: (bondId: string, amount: number) => void;
   listBond: (bondId: string, config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }) => { success: boolean; error?: string };
-  createBond: (bond: Omit<Bond, 'id' | 'createdAt' | 'status'>) => void;
+  createBond: (bond: Omit<Bond, 'id' | 'createdAt' | 'status'>) => string;
   confirmSettlement: (transactionId: string) => void;
   
   // Helpers
@@ -348,21 +348,21 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const createBond = (bondData: Omit<Bond, 'id' | 'createdAt' | 'status'>) => {
+  const createBond = (bondData: Omit<Bond, 'id' | 'createdAt' | 'status'>): string => {
+    const newBondId = `bond-${Date.now()}`;
     const newBond: Bond = {
       ...bondData,
-      id: `bond-${Date.now()}`,
+      id: newBondId,
       createdAt: new Date().toISOString().split('T')[0],
       status: 'available',
     };
 
     setBonds(prev => [...prev, newBond]);
 
-    setFinancialInstitution(prev => ({
+    // Update broker stats for broker-created bonds
+    setBroker(prev => ({
       ...prev,
-      issuedBonds: [...prev.issuedBonds, newBond.id],
-      totalIssuedValue: prev.totalIssuedValue + bondData.value * bondData.totalSupply,
-      activeSupply: prev.activeSupply + bondData.totalSupply,
+      totalListings: prev.totalListings + 1,
     }));
 
     // Update custodian
@@ -377,12 +377,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
       id: `tx-${Date.now()}`,
       type: 'issuance',
       bondId: newBond.id,
-      fromId: financialInstitution.id,
+      fromId: broker.id,
       amount: bondData.totalSupply,
       value: bondData.value * bondData.totalSupply,
       timestamp: new Date().toISOString(),
       status: 'completed',
-      description: `Issued new bond: ${bondData.name}`,
+      description: `Broker created new bond: ${bondData.name}`,
     };
 
     setTransactions(prev => [...prev, newTransaction]);
@@ -393,6 +393,8 @@ export function BondProvider({ children }: { children: ReactNode }) {
       totalBondsIssued: prev.totalBondsIssued + 1,
       totalValueIssued: prev.totalValueIssued + bondData.value * bondData.totalSupply,
     }));
+
+    return newBondId;
   };
 
   const confirmSettlement = (transactionId: string) => {
