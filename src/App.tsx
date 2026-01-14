@@ -14,6 +14,7 @@ import InvestorPortfolio from "./pages/investor/InvestorPortfolio";
 import InvestorWallet from "./pages/investor/InvestorWallet";
 import InvestorTransactions from "./pages/investor/InvestorTransactions";
 import InvestorSettings from "./pages/investor/InvestorSettings";
+import InvestorSupport from "./pages/investor/InvestorSupport";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import CustodianDashboard from "./pages/custodian/CustodianDashboard";
 import FIDashboard from "./pages/fi/FIDashboard";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/investor/wallet" element={<InvestorWallet />} />
             <Route path="/investor/transactions" element={<InvestorTransactions />} />
             <Route path="/investor/settings" element={<InvestorSettings />} />
+            <Route path="/investor/support" element={<InvestorSupport />} />
             {/* Other Role Routes */}
             <Route path="/broker" element={<BrokerDashboard />} />
             <Route path="/broker/*" element={<BrokerDashboard />} />

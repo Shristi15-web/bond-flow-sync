@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
@@ -10,7 +10,8 @@ import {
   Building2,
   Shield,
   Landmark,
-  Users
+  Users,
+  MessageSquare
 } from "lucide-react";
 import { useBondContext } from "@/context/BondContext";
 import { UserRole } from "@/types/bond";
@@ -28,6 +29,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "My Portfolio", href: "/investor/portfolio", icon: <FileText className="w-5 h-5" /> },
     { label: "Wallet", href: "/investor/wallet", icon: <Wallet className="w-5 h-5" /> },
     { label: "Transactions", href: "/investor/transactions", icon: <FileText className="w-5 h-5" /> },
+    { label: "Support", href: "/investor/support", icon: <MessageSquare className="w-5 h-5" /> },
   ],
   broker: [
     { label: "Dashboard", href: "/broker", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -65,12 +67,22 @@ const roleLabels: Record<UserRole, string> = {
 
 export function DashboardNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentUser, logout, investor } = useBondContext();
 
   if (!currentUser) return null;
 
   const items = navItems[currentUser.role];
   const displayName = currentUser.role === 'investor' ? investor.name : roleLabels[currentUser.role];
+
+  const handleLogout = () => {
+    // Clear session data
+    logout();
+    // Clear any stored session flags
+    localStorage.removeItem('bondfi_session');
+    // Navigate to landing page
+    navigate('/landing');
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-sidebar backdrop-blur-xl z-50">
@@ -129,10 +141,7 @@ export function DashboardNav() {
             Settings
           </Link>
           <button
-            onClick={() => {
-              logout();
-              window.location.href = '/';
-            }}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
           >
             <LogOut className="w-5 h-5" />
