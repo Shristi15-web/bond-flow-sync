@@ -32,6 +32,17 @@ interface ComplianceMetrics {
   auditsPassed: number;
 }
 
+export interface BondListing {
+  id: string;
+  bondId: string;
+  minInvestmentUnit: number;
+  availableQuantity: number;
+  listingStartDate: string;
+  listingEndDate: string;
+  status: 'active' | 'expired' | 'sold_out';
+  createdAt: string;
+}
+
 interface BondContextType {
   // Data
   bonds: Bond[];
@@ -42,6 +53,7 @@ interface BondContextType {
   financialInstitution: FinancialInstitution;
   governmentPartner: GovernmentPartner;
   complianceMetrics: ComplianceMetrics;
+  listings: BondListing[];
   
   // Auth
   currentUser: { role: UserRole; id: string } | null;
@@ -54,13 +66,14 @@ interface BondContextType {
   
   // Actions
   purchaseBond: (bondId: string, amount: number) => void;
-  listBond: (bondId: string) => void;
+  listBond: (bondId: string, config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }) => { success: boolean; error?: string };
   createBond: (bond: Omit<Bond, 'id' | 'createdAt' | 'status'>) => void;
   confirmSettlement: (transactionId: string) => void;
   
   // Helpers
   getBondById: (id: string) => Bond | undefined;
   getTransactionsByBond: (bondId: string) => Transaction[];
+  hasOverlappingListing: (bondId: string, startDate: string, endDate: string) => boolean;
 }
 
 const BondContext = createContext<BondContextType | undefined>(undefined);
@@ -76,6 +89,7 @@ interface StoredData {
   financialInstitution: FinancialInstitution;
   governmentPartner: GovernmentPartner;
   complianceMetrics: ComplianceMetrics;
+  listings: BondListing[];
 }
 
 function loadFromStorage(): StoredData | null {
@@ -115,6 +129,8 @@ export function BondProvider({ children }: { children: ReactNode }) {
   const [complianceMetrics, setComplianceMetrics] = useState<ComplianceMetrics>(
     stored?.complianceMetrics || initialComplianceMetrics
   );
+  const [listings, setListings] = useState<BondListing[]>(stored?.listings || []);
+  
   // Load persisted user session
   const [currentUser, setCurrentUser] = useState<{ role: UserRole; id: string } | null>(() => {
     try {
@@ -137,8 +153,9 @@ export function BondProvider({ children }: { children: ReactNode }) {
       financialInstitution,
       governmentPartner,
       complianceMetrics,
+      listings,
     });
-  }, [bonds, transactions, investor, broker, custodian, financialInstitution, governmentPartner, complianceMetrics]);
+  }, [bonds, transactions, investor, broker, custodian, financialInstitution, governmentPartner, complianceMetrics, listings]);
 
   const login = (role: UserRole) => {
     const userIds: Record<UserRole, string> = {
@@ -260,33 +277,75 @@ export function BondProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const listBond = (bondId: string) => {
+  // Check for overlapping listings
+  const hasOverlappingListing = (bondId: string, startDate: string, endDate: string): boolean => {
+    return listings.some(listing => {
+      if (listing.bondId !== bondId || listing.status !== 'active') return false;
+      const existingStart = new Date(listing.listingStartDate);
+      const existingEnd = new Date(listing.listingEndDate);
+      const newStart = new Date(startDate);
+      const newEnd = new Date(endDate);
+      // Check if date ranges overlap
+      return newStart <= existingEnd && newEnd >= existingStart;
+    });
+  };
+
+  const listBond = (
+    bondId: string,
+    config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }
+  ): { success: boolean; error?: string } => {
+    // Check for duplicate/overlapping listing
+    if (hasOverlappingListing(bondId, config.listingStartDate, config.listingEndDate)) {
+      return { success: false, error: 'This bond already has an active listing with overlapping dates' };
+    }
+
+    const bond = bonds.find(b => b.id === bondId);
+    if (!bond) {
+      return { success: false, error: 'Bond not found' };
+    }
+
+    // Create the listing
+    const newListing: BondListing = {
+      id: `listing-${Date.now()}`,
+      bondId,
+      minInvestmentUnit: config.minInvestmentUnit,
+      availableQuantity: config.availableQuantity,
+      listingStartDate: config.listingStartDate,
+      listingEndDate: config.listingEndDate,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    };
+
+    setListings(prev => [...prev, newListing]);
+
+    // Update bond status to listed
     setBonds(prev =>
       prev.map(b => (b.id === bondId ? { ...b, status: 'listed' as const } : b))
     );
 
+    // Update broker
     setBroker(prev => ({
       ...prev,
-      listedBonds: [...prev.listedBonds, bondId],
+      listedBonds: prev.listedBonds.includes(bondId) ? prev.listedBonds : [...prev.listedBonds, bondId],
       totalListings: prev.totalListings + 1,
     }));
 
-    const bond = bonds.find(b => b.id === bondId);
-    if (bond) {
-      const newTransaction: Transaction = {
-        id: `tx-${Date.now()}`,
-        type: 'listing',
-        bondId,
-        fromId: financialInstitution.id,
-        toId: broker.id,
-        amount: bond.availableSupply,
-        value: bond.value,
-        timestamp: new Date().toISOString(),
-        status: 'completed',
-        description: `Listed ${bond.name} for investor purchase`,
-      };
-      setTransactions(prev => [...prev, newTransaction]);
-    }
+    // Add transaction
+    const newTransaction: Transaction = {
+      id: `tx-${Date.now()}`,
+      type: 'listing',
+      bondId,
+      fromId: financialInstitution.id,
+      toId: broker.id,
+      amount: config.availableQuantity,
+      value: bond.value,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      description: `Listed ${bond.name} for investor purchase`,
+    };
+    setTransactions(prev => [...prev, newTransaction]);
+
+    return { success: true };
   };
 
   const createBond = (bondData: Omit<Bond, 'id' | 'createdAt' | 'status'>) => {
@@ -363,6 +422,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         financialInstitution,
         governmentPartner,
         complianceMetrics,
+        listings,
         currentUser,
         login,
         logout,
@@ -374,6 +434,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         confirmSettlement,
         getBondById,
         getTransactionsByBond,
+        hasOverlappingListing,
       }}
     >
       {children}
