@@ -1,6 +1,4 @@
-export type BondStatus = 'available' | 'listed' | 'sold' | 'matured' | 'pending';
-
-export type ListerType = 'broker' | 'custodian' | 'financial_institution' | 'government_partner';
+export type BondStatus = 'available' | 'listed' | 'sold' | 'matured';
 
 export interface Bond {
   id: string;
@@ -17,8 +15,6 @@ export interface Bond {
   maturityDate: string;
   custodianId: string;
   description: string;
-  listerType?: ListerType;
-  createdByListerId?: string;
 }
 
 export interface BondPurchase {
@@ -46,16 +42,15 @@ export interface Transaction {
   description: string;
 }
 
-export type UserRole = 'investor' | 'lister';
+export type UserRole = 'investor' | 'broker' | 'custodian' | 'financial_institution' | 'government_partner';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  balance?: number;
+  balance?: number; // For investors - stablecoin balance
   createdAt: string;
-  status?: 'active' | 'suspended';
 }
 
 export interface Investor extends User {
@@ -68,22 +63,32 @@ export interface Investor extends User {
   preferredCurrency?: 'INR' | 'USDT';
 }
 
-export interface Lister extends User {
-  role: 'lister';
-  institutionName?: string;
+export interface Broker extends User {
+  role: 'broker';
   listedBonds: string[];
   totalListings: number;
-  totalVolumeTokenized: number;
-  kycStatus: 'not_submitted' | 'under_review' | 'verified';
-  country?: string;
-  contactDetails?: string;
+  transactionVolume: number;
 }
 
-// Legacy types for backward compatibility
-export type Broker = Lister;
-export type Custodian = Lister;
-export type FinancialInstitution = Lister;
-export type GovernmentPartner = Lister;
+export interface Custodian extends User {
+  role: 'custodian';
+  bondsInCustody: string[];
+  totalCustodyValue: number;
+  settlementsProcessed: number;
+}
+
+export interface FinancialInstitution extends User {
+  role: 'financial_institution';
+  issuedBonds: string[];
+  totalIssuedValue: number;
+  activeSupply: number;
+}
+
+export interface GovernmentPartner extends User {
+  role: 'government_partner';
+  jurisdiction: string;
+  oversightLevel: 'read-only';
+}
 
 export interface DemoCredentials {
   email: string;
@@ -92,12 +97,8 @@ export interface DemoCredentials {
 
 export const DEMO_CREDENTIALS: Record<UserRole, DemoCredentials> = {
   investor: { email: 'investor@bondfi.demo', password: 'demo123' },
-  lister: { email: 'lister@bondfi.demo', password: 'demo123' },
-};
-
-export const LISTER_TYPE_INFO: Record<ListerType, { label: string; description: string }> = {
-  broker: { label: 'Broker', description: 'List bonds for investors' },
-  custodian: { label: 'Custodian', description: 'Verify and settle holdings' },
-  financial_institution: { label: 'Financial Institution', description: 'Issue and manage bonds' },
-  government_partner: { label: 'Government Partner', description: 'Oversight and compliance' },
+  broker: { email: 'broker@bondfi.demo', password: 'demo123' },
+  custodian: { email: 'custodian@bondfi.demo', password: 'demo123' },
+  financial_institution: { email: 'fi@bondfi.demo', password: 'demo123' },
+  government_partner: { email: 'gov@bondfi.demo', password: 'demo123' },
 };

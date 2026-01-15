@@ -4,21 +4,10 @@ import { StatCard } from "@/components/ui/stat-card";
 import { useBondContext } from "@/context/BondContext";
 import { Wallet, TrendingUp, PiggyBank, Calendar, ArrowUpRight, Clock, AlertTriangle, CheckCircle, Newspaper, Shield, Landmark } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { yieldHistoryData } from "@/data/dummyData";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-// Yield history data
-const yieldHistoryData = [
-  { month: 'Jan', yield: 3.8, returns: 120 },
-  { month: 'Feb', yield: 3.9, returns: 145 },
-  { month: 'Mar', yield: 4.0, returns: 160 },
-  { month: 'Apr', yield: 4.1, returns: 180 },
-  { month: 'May', yield: 4.15, returns: 195 },
-  { month: 'Jun', yield: 4.2, returns: 220 },
-  { month: 'Jul', yield: 4.25, returns: 250 },
-  { month: 'Aug', yield: 4.3, returns: 280 },
-];
 
 // Upcoming bonds data
 const upcomingBonds = [
