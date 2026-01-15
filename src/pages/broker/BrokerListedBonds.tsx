@@ -7,8 +7,11 @@ import { FileText, TrendingUp, X, BarChart3, ArrowUpRight, ArrowDownRight } from
 import { cn } from "@/lib/utils";
 
 export default function BrokerListedBonds() {
-  const { bonds, broker, transactions } = useBondContext();
-  const listedBonds = bonds.filter(b => broker.listedBonds.includes(b.id));
+  const { bonds, broker, transactions, currentUser } = useBondContext();
+  // Show all bonds created by this lister (including pending approval)
+  const listedBonds = bonds.filter(b => 
+    broker.listedBonds.includes(b.id) || b.listerId === currentUser?.id || b.listerId === broker.id
+  );
   const [selectedBond, setSelectedBond] = useState<string | null>(null);
 
   const selectedBondData = selectedBond ? bonds.find(b => b.id === selectedBond) : null;
@@ -113,9 +116,15 @@ export default function BrokerListedBonds() {
                     <td className="p-4">
                       <span className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium",
-                        bond.status === 'listed' ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
+                        bond.approvalStatus === 'approved' && bond.status === 'listed' ? "bg-success/20 text-success" :
+                        bond.approvalStatus === 'pending' ? "bg-warning/20 text-warning" :
+                        bond.approvalStatus === 'rejected' ? "bg-destructive/20 text-destructive" :
+                        "bg-muted/20 text-muted-foreground"
                       )}>
-                        {bond.status === 'listed' ? 'Active' : 'Pending'}
+                        {bond.approvalStatus === 'approved' && bond.status === 'listed' ? 'Active' :
+                         bond.approvalStatus === 'pending' ? 'Pending Approval' :
+                         bond.approvalStatus === 'rejected' ? 'Rejected' :
+                         bond.status}
                       </span>
                     </td>
                     <td className="p-4">

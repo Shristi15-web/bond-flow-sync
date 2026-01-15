@@ -15,7 +15,8 @@ export default function InvestorBonds() {
   const [buyStep, setBuyStep] = useState<BuyStep>('details');
   const [quantity, setQuantity] = useState(1);
   
-  const listedBonds = bonds.filter(b => b.status === 'listed');
+  // Only show bonds that are listed AND approved
+  const listedBonds = bonds.filter(b => b.status === 'listed' && b.approvalStatus === 'approved');
 
   const filteredBonds = listedBonds.filter(bond => 
     bond.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

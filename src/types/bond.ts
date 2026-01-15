@@ -2,6 +2,8 @@ export type BondStatus = 'available' | 'listed' | 'sold' | 'matured';
 
 export type ListerSubType = 'Broker' | 'Custodian' | 'Financial Institution' | 'Government Partner';
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Bond {
   id: string;
   name: string;
@@ -13,11 +15,13 @@ export interface Bond {
   totalSupply: number;
   availableSupply: number;
   status: BondStatus;
+  approvalStatus: ApprovalStatus; // Admin approval status
   createdAt: string;
   maturityDate: string;
   custodianId: string;
   description: string;
   listerSubType?: ListerSubType;
+  listerId?: string; // ID of the lister who created the bond
 }
 
 export interface BondPurchase {

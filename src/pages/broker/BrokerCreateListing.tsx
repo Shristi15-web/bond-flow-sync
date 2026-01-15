@@ -63,7 +63,7 @@ const initialBondForm: NewBondForm = {
   couponFrequency: '',
   tenure: 0,
   maturityDate: '',
-  minInvestment: 0,
+  minInvestment: 1, // Minimum $1 investment
   maxUnitsPerInvestor: 0,
   issueDate: '',
   listingStartDate: '',
@@ -89,7 +89,7 @@ export default function BrokerCreateListing() {
   const [listStep, setListStep] = useState<ListStep>('select');
   const [selectedBondId, setSelectedBondId] = useState('');
   const [listingConfig, setListingConfig] = useState({
-    minInvestmentUnit: 1,
+    minInvestmentUnit: 1, // Minimum $1
     availableQuantity: 0,
     listingStartDate: '',
     listingEndDate: '',
@@ -129,7 +129,8 @@ export default function BrokerCreateListing() {
 
   const validateInvestmentRules = (): boolean => {
     const errors: string[] = [];
-    if (bondForm.minInvestment <= 0) errors.push('Minimum investment must be greater than 0');
+    // Enforce minimum $1 investment
+    if (bondForm.minInvestment < 1) errors.push('Minimum investment must be at least $1');
     if (bondForm.maxUnitsPerInvestor <= 0) errors.push('Maximum units per investor must be greater than 0');
     if (!bondForm.issueDate) errors.push('Issue date is required');
     if (!bondForm.listingStartDate) errors.push('Listing start date is required');
@@ -162,7 +163,8 @@ export default function BrokerCreateListing() {
     setCreateStep('processing');
     
     setTimeout(() => {
-      const newBondId = `bond-${Date.now()}`;
+      // Enforce minimum $1 investment
+      const minInvestment = Math.max(1, bondForm.minInvestment);
       
       createBond({
         name: bondForm.name,
@@ -170,7 +172,7 @@ export default function BrokerCreateListing() {
         yield: bondForm.yield,
         tenure: bondForm.tenure,
         value: bondForm.value,
-        minInvestment: bondForm.minInvestment,
+        minInvestment: minInvestment,
         totalSupply: bondForm.totalSupply,
         availableSupply: bondForm.totalSupply,
         maturityDate: bondForm.maturityDate,
@@ -179,12 +181,12 @@ export default function BrokerCreateListing() {
         listerSubType: bondForm.listerSubType as ListerSubType,
       });
       
-      setCreatedBondId(newBondId);
+      setCreatedBondId(`bond-${Date.now()}`);
       setCreateStep('created');
       
       toast({
         title: "Bond Created Successfully",
-        description: "Your bond is now available for listing.",
+        description: "Your bond has been submitted for approval. Once approved, you can list it for investors.",
       });
     }, 2000);
   };

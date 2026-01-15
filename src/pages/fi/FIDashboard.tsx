@@ -17,7 +17,7 @@ export default function FIDashboard() {
     yield: 4, 
     tenure: 60, 
     value: 5000, 
-    minInvestment: 50, 
+    minInvestment: 1, // Minimum $1 investment
     totalSupply: 100000, 
     description: '' 
   });
@@ -30,7 +30,7 @@ export default function FIDashboard() {
       custodianId: custodian.id,
     });
     setShowForm(false);
-    setForm({ name: '', issuer: financialInstitution.name, yield: 4, tenure: 60, value: 5000, minInvestment: 50, totalSupply: 100000, description: '' });
+    setForm({ name: '', issuer: financialInstitution.name, yield: 4, tenure: 60, value: 5000, minInvestment: 1, totalSupply: 100000, description: '' });
   };
 
   const avgYield = issuedBonds.length > 0 
