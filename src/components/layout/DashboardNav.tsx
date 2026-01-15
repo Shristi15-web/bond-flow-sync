@@ -11,7 +11,9 @@ import {
   Shield,
   Landmark,
   Users,
-  MessageSquare
+  MessageSquare,
+  Calculator,
+  Store
 } from "lucide-react";
 import { useBondContext } from "@/context/BondContext";
 import { UserRole } from "@/types/bond";
@@ -27,8 +29,9 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", href: "/investor", icon: <LayoutDashboard className="w-5 h-5" /> },
     { label: "Available Bonds", href: "/investor/bonds", icon: <TrendingUp className="w-5 h-5" /> },
     { label: "My Portfolio", href: "/investor/portfolio", icon: <FileText className="w-5 h-5" /> },
+    { label: "Secondary Market", href: "/investor/secondary-market", icon: <Store className="w-5 h-5" /> },
+    { label: "Returns Calculator", href: "/investor/calculator", icon: <Calculator className="w-5 h-5" /> },
     { label: "Wallet", href: "/investor/wallet", icon: <Wallet className="w-5 h-5" /> },
-    { label: "Transactions", href: "/investor/transactions", icon: <FileText className="w-5 h-5" /> },
     { label: "Support", href: "/investor/support", icon: <MessageSquare className="w-5 h-5" /> },
   ],
   broker: [

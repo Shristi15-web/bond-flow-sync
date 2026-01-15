@@ -15,6 +15,8 @@ import InvestorWallet from "./pages/investor/InvestorWallet";
 import InvestorTransactions from "./pages/investor/InvestorTransactions";
 import InvestorSettings from "./pages/investor/InvestorSettings";
 import InvestorSupport from "./pages/investor/InvestorSupport";
+import InvestorCalculator from "./pages/investor/InvestorCalculator";
+import InvestorSecondaryMarket from "./pages/investor/InvestorSecondaryMarket";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import BrokerProfile from "./pages/broker/BrokerProfile";
 import BrokerSupport from "./pages/broker/BrokerSupport";
@@ -49,6 +51,8 @@ const App = () => (
             <Route path="/investor/transactions" element={<InvestorTransactions />} />
             <Route path="/investor/settings" element={<InvestorSettings />} />
             <Route path="/investor/support" element={<InvestorSupport />} />
+            <Route path="/investor/calculator" element={<InvestorCalculator />} />
+            <Route path="/investor/secondary-market" element={<InvestorSecondaryMarket />} />
             {/* Broker Routes */}
             <Route path="/broker" element={<BrokerDashboard />} />
             <Route path="/broker/create" element={<BrokerCreateListing />} />
