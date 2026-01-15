@@ -20,6 +20,18 @@ import {
   initialTransactions,
   complianceMetrics as initialComplianceMetrics,
 } from '@/data/dummyData';
+import {
+  RegisteredUser,
+  getCurrentSession,
+  setCurrentSession,
+  clearCurrentSession,
+  loadUserData,
+  saveUserData,
+  UserData,
+  registerUser,
+  authenticateUser,
+  isDemoUser,
+} from '@/lib/userStorage';
 
 interface ComplianceMetrics {
   totalBondsIssued: number;
@@ -92,8 +104,18 @@ interface BondContextType {
   availableForPayout: number;
   
   // Auth
-  currentUser: { role: UserRole; id: string } | null;
+  currentUser: RegisteredUser | null;
   login: (role: UserRole) => void;
+  loginWithCredentials: (email: string, password: string) => { success: boolean; error?: string };
+  registerNewUser: (userData: {
+    email: string;
+    password: string;
+    role: UserRole;
+    name?: string;
+    country?: string;
+    preferredCurrency?: 'INR' | 'USDT';
+    orgName?: string;
+  }) => { success: boolean; user?: RegisteredUser; error?: string };
   logout: () => void;
   
   // Investor Actions
@@ -126,117 +148,242 @@ interface BondContextType {
 
 const BondContext = createContext<BondContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'bondfi_data';
+const SHARED_STORAGE_KEY = 'bondfi_shared_data';
 
-interface StoredData {
+interface SharedData {
   bonds: Bond[];
   transactions: Transaction[];
-  investor: Investor;
-  broker: Broker;
   custodian: Custodian;
   financialInstitution: FinancialInstitution;
   governmentPartner: GovernmentPartner;
   complianceMetrics: ComplianceMetrics;
-  listings: BondListing[];
-  secondaryMarketListings: SecondaryMarketListing[];
-  bankAccount: BankAccount | null;
-  walletTransactions: WalletTransaction[];
-  availableForPayout: number;
+  // Global secondary market listings (from all users)
+  globalSecondaryMarketListings: SecondaryMarketListing[];
 }
 
-function loadFromStorage(): StoredData | null {
+function loadSharedData(): SharedData | null {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(SHARED_STORAGE_KEY);
     if (stored) {
       return JSON.parse(stored);
     }
   } catch (e) {
-    console.error('Error loading from localStorage:', e);
+    console.error('Error loading shared data:', e);
   }
   return null;
 }
 
-function saveToStorage(data: StoredData): void {
+function saveSharedData(data: SharedData): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
-    console.error('Error saving to localStorage:', e);
+    console.error('Error saving shared data:', e);
   }
 }
 
 export function BondProvider({ children }: { children: ReactNode }) {
-  const stored = loadFromStorage();
+  const sharedStored = loadSharedData();
+  const sessionUser = getCurrentSession();
+  const userData = sessionUser ? loadUserData(sessionUser.id) : null;
   
-  const [bonds, setBonds] = useState<Bond[]>(stored?.bonds || initialBonds);
-  const [transactions, setTransactions] = useState<Transaction[]>(stored?.transactions || initialTransactions);
-  const [investor, setInvestor] = useState<Investor>(stored?.investor || initialInvestor);
-  const [broker, setBroker] = useState<Broker>(stored?.broker || initialBroker);
-  const [custodian, setCustodian] = useState<Custodian>(stored?.custodian || initialCustodian);
+  // Shared data (bonds, transactions, etc.)
+  const [bonds, setBonds] = useState<Bond[]>(sharedStored?.bonds || initialBonds);
+  const [transactions, setTransactions] = useState<Transaction[]>(sharedStored?.transactions || initialTransactions);
+  const [custodian, setCustodian] = useState<Custodian>(sharedStored?.custodian || initialCustodian);
   const [financialInstitution, setFinancialInstitution] = useState<FinancialInstitution>(
-    stored?.financialInstitution || initialFinancialInstitution
+    sharedStored?.financialInstitution || initialFinancialInstitution
   );
   const [governmentPartner, setGovernmentPartner] = useState<GovernmentPartner>(
-    stored?.governmentPartner || initialGovernmentPartner
+    sharedStored?.governmentPartner || initialGovernmentPartner
   );
   const [complianceMetrics, setComplianceMetrics] = useState<ComplianceMetrics>(
-    stored?.complianceMetrics || initialComplianceMetrics
+    sharedStored?.complianceMetrics || initialComplianceMetrics
   );
-  const [listings, setListings] = useState<BondListing[]>(stored?.listings || []);
-  const [secondaryMarketListings, setSecondaryMarketListings] = useState<SecondaryMarketListing[]>(
-    stored?.secondaryMarketListings || []
-  );
-  const [bankAccount, setBankAccount] = useState<BankAccount | null>(stored?.bankAccount || null);
-  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(
-    stored?.walletTransactions || []
-  );
-  const [availableForPayout, setAvailableForPayout] = useState<number>(stored?.availableForPayout || 0);
   
-  // Load persisted user session
-  const [currentUser, setCurrentUser] = useState<{ role: UserRole; id: string } | null>(() => {
-    try {
-      const session = localStorage.getItem('bondfi_session');
-      if (session) {
-        return JSON.parse(session);
-      }
-    } catch {}
-    return null;
-  });
+  // Global secondary market listings (shared across all users)
+  const [globalSecondaryMarketListings, setGlobalSecondaryMarketListings] = useState<SecondaryMarketListing[]>(
+    sharedStored?.globalSecondaryMarketListings || []
+  );
+  
+  // User-specific data
+  const [investor, setInvestor] = useState<Investor>(userData?.investor || initialInvestor);
+  const [broker, setBroker] = useState<Broker>(userData?.broker || initialBroker);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(
+    userData?.walletTransactions || []
+  );
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(userData?.bankAccount || null);
+  const [availableForPayout, setAvailableForPayout] = useState<number>(userData?.availableForPayout || 0);
+  const [listings, setListings] = useState<BondListing[]>(userData?.listings || []);
+  
+  // For backward compatibility - secondaryMarketListings now points to global
+  const secondaryMarketListings = globalSecondaryMarketListings;
+  const setSecondaryMarketListings = setGlobalSecondaryMarketListings;
+  
+  // Current user session
+  const [currentUser, setCurrentUser] = useState<RegisteredUser | null>(sessionUser);
 
-  // Persist to localStorage whenever data changes
+  // Persist shared data whenever it changes
   useEffect(() => {
-    saveToStorage({
+    saveSharedData({
       bonds,
       transactions,
-      investor,
-      broker,
       custodian,
       financialInstitution,
       governmentPartner,
       complianceMetrics,
-      listings,
-      secondaryMarketListings,
-      bankAccount,
-      walletTransactions,
-      availableForPayout,
+      globalSecondaryMarketListings,
     });
-  }, [bonds, transactions, investor, broker, custodian, financialInstitution, governmentPartner, complianceMetrics, listings, secondaryMarketListings, bankAccount, walletTransactions, availableForPayout]);
+  }, [bonds, transactions, custodian, financialInstitution, governmentPartner, complianceMetrics, globalSecondaryMarketListings]);
 
+  // Persist user-specific data whenever it changes (only if logged in)
+  useEffect(() => {
+    if (currentUser) {
+      saveUserData(currentUser.id, {
+        investor,
+        broker,
+        walletTransactions,
+        bankAccount,
+        availableForPayout,
+        secondaryMarketListings: [], // Keep empty since we use global
+        listings,
+      });
+    }
+  }, [currentUser, investor, broker, walletTransactions, bankAccount, availableForPayout, listings]);
+
+  // Demo login (for backward compatibility)
   const login = (role: UserRole) => {
-    const userIds: Record<UserRole, string> = {
-      investor: 'investor-001',
-      broker: 'broker-001',
-      custodian: 'custodian-001',
-      financial_institution: 'fi-001',
-      government_partner: 'gov-001',
+    const demoUser: RegisteredUser = {
+      id: role === 'investor' ? 'investor-001' : 'broker-001',
+      email: `${role}@bondfi.demo`,
+      password: 'demo123',
+      role,
+      displayRole: role === 'investor' ? 'investor' : 'lister',
+      createdAt: new Date().toISOString(),
     };
-    const user = { role, id: userIds[role] };
+    
+    setCurrentUser(demoUser);
+    setCurrentSession(demoUser);
+    
+    // Load demo data
+    setInvestor(initialInvestor);
+    setBroker(initialBroker);
+    setWalletTransactions([]);
+    setBankAccount(null);
+    setAvailableForPayout(0);
+    setListings([]);
+  };
+
+  // Login with credentials
+  const loginWithCredentials = (email: string, password: string): { success: boolean; error?: string } => {
+    // Check if demo credentials
+    if (isDemoUser(email)) {
+      const role = email.includes('investor') ? 'investor' : 'broker';
+      login(role as UserRole);
+      return { success: true };
+    }
+    
+    const result = authenticateUser(email, password);
+    
+    if (!result.success || !result.user) {
+      return { success: false, error: result.error };
+    }
+    
+    const user = result.user;
     setCurrentUser(user);
-    localStorage.setItem('bondfi_session', JSON.stringify(user));
+    setCurrentSession(user);
+    
+    // Load user-specific data
+    const userData = loadUserData(user.id);
+    if (userData) {
+      setInvestor(userData.investor);
+      setBroker(userData.broker);
+      setWalletTransactions(userData.walletTransactions);
+      setBankAccount(userData.bankAccount);
+      setAvailableForPayout(userData.availableForPayout);
+      setListings(userData.listings);
+    }
+    
+    return { success: true };
+  };
+
+  // Register new user
+  const registerNewUser = (userData: {
+    email: string;
+    password: string;
+    role: UserRole;
+    name?: string;
+    country?: string;
+    preferredCurrency?: 'INR' | 'USDT';
+    orgName?: string;
+  }): { success: boolean; user?: RegisteredUser; error?: string } => {
+    const result = registerUser({
+      email: userData.email,
+      password: userData.password,
+      role: userData.role,
+      displayRole: userData.role === 'investor' ? 'investor' : 'lister',
+      name: userData.name,
+      country: userData.country,
+      preferredCurrency: userData.preferredCurrency,
+      orgName: userData.orgName,
+    });
+    
+    if (!result.success || !result.user) {
+      return { success: false, error: result.error };
+    }
+    
+    const user = result.user;
+    
+    // Set as current user
+    setCurrentUser(user);
+    setCurrentSession(user);
+    
+    // Initialize with fresh empty data
+    const emptyInvestor: Investor = {
+      id: user.id,
+      name: userData.name || 'New User',
+      email: userData.email,
+      role: 'investor',
+      balance: 0,
+      totalInvested: 0,
+      totalReturns: 0,
+      purchases: [],
+      createdAt: user.createdAt,
+      country: userData.country,
+      preferredCurrency: userData.preferredCurrency || 'USDT',
+    };
+    
+    const emptyBroker: Broker = {
+      id: user.id,
+      name: userData.name || userData.orgName || 'New Lister',
+      email: userData.email,
+      role: 'broker',
+      listedBonds: [],
+      totalListings: 0,
+      transactionVolume: 0,
+      createdAt: user.createdAt,
+    };
+    
+    setInvestor(emptyInvestor);
+    setBroker(emptyBroker);
+    setWalletTransactions([]);
+    setBankAccount(null);
+    setAvailableForPayout(0);
+    setListings([]);
+    
+    return { success: true, user };
   };
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('bondfi_session');
+    clearCurrentSession();
+    
+    // Reset to initial state
+    setInvestor(initialInvestor);
+    setBroker(initialBroker);
+    setWalletTransactions([]);
+    setBankAccount(null);
+    setAvailableForPayout(0);
+    setListings([]);
   };
 
   const updateInvestorProfile = (updates: Partial<Pick<Investor, 'name' | 'country' | 'preferredCurrency'>>) => {
@@ -252,7 +399,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       balance: prev.balance + amount,
     }));
 
-    // Add wallet transaction
     const newWalletTx: WalletTransaction = {
       id: `wtx-${Date.now()}`,
       type: 'topup',
@@ -263,7 +409,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     };
     setWalletTransactions(prev => [...prev, newWalletTx]);
 
-    // Add transaction
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'purchase',
@@ -290,15 +435,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Insufficient bond supply' };
     }
 
-    // Only allow purchasing approved bonds
     if (bond.approvalStatus !== 'approved') {
       return { success: false, error: 'Bond is not approved for investment' };
     }
 
-    // Calculate purchase value - minimum $1 per unit
     const purchaseValue = Math.max(1, bond.minInvestment) * amount;
     
-    // Enforce minimum $1 investment
     if (purchaseValue < 1) {
       return { success: false, error: 'Minimum investment is $1' };
     }
@@ -334,7 +476,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       )
     );
 
-    // Add wallet transaction
     const newWalletTx: WalletTransaction = {
       id: `wtx-${Date.now()}`,
       type: 'purchase',
@@ -399,7 +540,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Bond not found' };
     }
 
-    // Only allow listing approved bonds
     if (bond.approvalStatus !== 'approved') {
       return { success: false, error: 'Bond must be approved before listing. Please wait for admin approval.' };
     }
@@ -451,9 +591,9 @@ export function BondProvider({ children }: { children: ReactNode }) {
       id: newBondId,
       createdAt: new Date().toISOString().split('T')[0],
       status: 'available',
-      approvalStatus: 'pending', // All new bonds start as pending approval
-      minInvestment: 1, // Enforce minimum $1 investment
-      listerId: broker.id, // Track who created this bond
+      approvalStatus: 'pending',
+      minInvestment: 1,
+      listerId: currentUser?.id || broker.id,
     };
 
     setBonds(prev => [...prev, newBond]);
@@ -473,11 +613,11 @@ export function BondProvider({ children }: { children: ReactNode }) {
       id: `tx-${Date.now()}`,
       type: 'issuance',
       bondId: newBond.id,
-      fromId: broker.id,
+      fromId: currentUser?.id || broker.id,
       amount: bondData.totalSupply,
       value: bondData.value * bondData.totalSupply,
       timestamp: new Date().toISOString(),
-      status: 'pending', // Transaction is pending until approved
+      status: 'pending',
       description: `Broker created new bond: ${bondData.name} (Pending Approval)`,
     };
 
@@ -506,7 +646,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  // Secondary Market: List bond for sale
   const listBondForSale = (purchaseId: string, quantity: number, sellingPrice: number): { success: boolean; error?: string } => {
     const purchase = investor.purchases.find(p => p.id === purchaseId);
     if (!purchase) {
@@ -522,7 +661,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Bond not found' };
     }
 
-    // Check if already listed
     const existingListing = secondaryMarketListings.find(
       l => l.purchaseId === purchaseId && l.status === 'listed'
     );
@@ -534,7 +672,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
       id: `sm-${Date.now()}`,
       purchaseId,
       bondId: purchase.bondId,
-      sellerId: investor.id,
+      sellerId: currentUser?.id || investor.id,
       quantity,
       sellingPrice,
       originalPrice: purchase.purchasePrice,
@@ -545,7 +683,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     setSecondaryMarketListings(prev => [...prev, newListing]);
 
-    // Update purchase status
     setInvestor(prev => ({
       ...prev,
       purchases: prev.purchases.map(p =>
@@ -556,11 +693,15 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  // Secondary Market: Buy from another investor
   const buyFromSecondaryMarket = (listingId: string): { success: boolean; error?: string } => {
     const listing = secondaryMarketListings.find(l => l.id === listingId);
     if (!listing || listing.status !== 'listed') {
       return { success: false, error: 'Listing not found or no longer available' };
+    }
+
+    // Prevent buying own listing
+    if (listing.sellerId === (currentUser?.id || investor.id)) {
+      return { success: false, error: 'Cannot buy your own listing' };
     }
 
     if (investor.balance < listing.sellingPrice) {
@@ -572,9 +713,9 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Bond not found' };
     }
 
-    // IMMEDIATELY remove the listing from secondary market (mark as sold)
+    // IMMEDIATELY remove the listing from secondary market
     setSecondaryMarketListings(prev =>
-      prev.filter(l => l.id !== listingId) // Remove entirely instead of just changing status
+      prev.filter(l => l.id !== listingId)
     );
 
     // Deduct from buyer's balance and add purchase
@@ -587,7 +728,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         {
           id: `purchase-${Date.now()}`,
           bondId: listing.bondId,
-          investorId: investor.id,
+          investorId: currentUser?.id || investor.id,
           amount: listing.quantity,
           purchasePrice: listing.sellingPrice,
           purchaseDate: new Date().toISOString().split('T')[0],
@@ -601,7 +742,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     // Credit seller's payout balance (simulating other investor)
     setAvailableForPayout(prev => prev + listing.sellingPrice);
 
-    // Add sale wallet transaction for seller
     const saleWalletTx: WalletTransaction = {
       id: `wtx-sale-${Date.now()}`,
       type: 'sale',
@@ -612,7 +752,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       bondName: bond.name,
     };
 
-    // Add wallet transactions
     const buyWalletTx: WalletTransaction = {
       id: `wtx-${Date.now()}`,
       type: 'purchase',
@@ -624,13 +763,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
     };
     setWalletTransactions(prev => [...prev, buyWalletTx, saleWalletTx]);
 
-    // Add transaction record
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'sale',
       bondId: listing.bondId,
       fromId: listing.sellerId,
-      toId: investor.id,
+      toId: currentUser?.id || investor.id,
       amount: listing.quantity,
       value: listing.sellingPrice,
       timestamp: new Date().toISOString(),
@@ -642,7 +780,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  // Wallet: Save bank account
   const saveBankAccount = (account: Omit<BankAccount, 'id'>) => {
     const newAccount: BankAccount = {
       ...account,
@@ -651,7 +788,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setBankAccount(newAccount);
   };
 
-  // Wallet: Withdraw funds
   const withdrawFunds = async (amount: number): Promise<{ success: boolean; error?: string }> => {
     if (amount > availableForPayout) {
       return { success: false, error: 'Insufficient payout balance' };
@@ -661,7 +797,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'No bank account linked' };
     }
 
-    // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 8000));
 
     setAvailableForPayout(prev => prev - amount);
@@ -682,7 +817,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
   const getBondById = (id: string) => bonds.find(b => b.id === id);
   const getTransactionsByBond = (bondId: string) => transactions.filter(t => t.bondId === bondId);
   
-  // Get only approved bonds visible to investors
   const getApprovedBondsForInvestors = () => bonds.filter(b => 
     b.status === 'listed' && b.approvalStatus === 'approved'
   );
@@ -698,7 +832,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return true;
   });
 
-  // Approve or reject a bond (for admin use)
   const approveBond = (bondId: string, approved: boolean): { success: boolean; error?: string } => {
     const bond = bonds.find(b => b.id === bondId);
     if (!bond) {
@@ -713,13 +846,11 @@ export function BondProvider({ children }: { children: ReactNode }) {
       )
     );
 
-    // Update pending verifications count
     setComplianceMetrics(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1),
     }));
 
-    // Update transaction status if approved
     if (approved) {
       setTransactions(prev =>
         prev.map(t =>
@@ -733,9 +864,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  // Automated verification and approval flow (10 seconds simulation)
   const autoVerifyAndApproveBond = (bondId: string) => {
-    // Update to "verifying" status immediately
     setBonds(prev =>
       prev.map(b =>
         b.id === bondId
@@ -744,7 +873,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       )
     );
 
-    // After 10 seconds, auto-approve the bond
     setTimeout(() => {
       setBonds(prev =>
         prev.map(b =>
@@ -754,13 +882,11 @@ export function BondProvider({ children }: { children: ReactNode }) {
         )
       );
 
-      // Update pending verifications count
       setComplianceMetrics(prev => ({
         ...prev,
         pendingVerifications: Math.max(0, prev.pendingVerifications - 1),
       }));
 
-      // Update transaction status
       setTransactions(prev =>
         prev.map(t =>
           t.bondId === bondId && t.status === 'pending'
@@ -768,7 +894,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
             : t
         )
       );
-    }, 10000); // 10 seconds
+    }, 10000);
   };
 
   return (
@@ -789,6 +915,8 @@ export function BondProvider({ children }: { children: ReactNode }) {
         availableForPayout,
         currentUser,
         login,
+        loginWithCredentials,
+        registerNewUser,
         logout,
         updateInvestorProfile,
         addStablecoins,

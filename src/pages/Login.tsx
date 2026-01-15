@@ -5,9 +5,10 @@ import { GlowCard } from "@/components/ui/glow-card";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useBondContext } from "@/context/BondContext";
 import { UserRole, DEMO_CREDENTIALS } from "@/types/bond";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, Building2, Shield, Landmark, Briefcase, ArrowLeft, 
-  Mail, Lock, Globe, Wallet, FileText, Eye, Hash, MapPin, 
+  Mail, Lock, Globe, Wallet, FileText, Eye, Hash, MapPin,
   CheckCircle2, Loader2
 } from "lucide-react";
 
@@ -23,8 +24,11 @@ const roleLabels: Record<UserRole, string> = {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useBondContext();
+  const { login, loginWithCredentials, registerNewUser } = useBondContext();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>('role');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [authProgress, setAuthProgress] = useState(0);
@@ -92,11 +96,11 @@ export default function Login() {
     }
   }, [step]);
 
-  // Redirect after approved
+  // Redirect after approved (for registration flow)
   useEffect(() => {
     if (step === 'approved' && selectedRole) {
       const redirectTimer = setTimeout(() => {
-        login(selectedRole);
+        // User is already logged in from registration, just navigate
         navigateToDashboard(selectedRole);
       }, 1500);
       
@@ -125,18 +129,71 @@ export default function Login() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+    
+    if (!loginEmail || !loginPassword) {
+      setLoginError('Please enter email and password');
+      return;
+    }
+    
     if (selectedRole) {
-      // Login: directly authenticate without waiting screen
-      login(selectedRole);
-      navigateToDashboard(selectedRole);
+      // Check if using demo credentials
+      const demoEmail = DEMO_CREDENTIALS[selectedRole].email;
+      if (loginEmail === demoEmail) {
+        login(selectedRole);
+        navigateToDashboard(selectedRole);
+        return;
+      }
+      
+      // Try to authenticate with credentials
+      const result = loginWithCredentials(loginEmail, loginPassword);
+      
+      if (result.success) {
+        navigateToDashboard(selectedRole);
+      } else {
+        setLoginError(result.error || 'Login failed');
+      }
     }
   };
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    setRegisterError(null);
+    
+    if (!regEmail || !regPassword) {
+      setRegisterError('Please enter email and password');
+      return;
+    }
+    
+    if (selectedRole === 'investor' && !termsAgreed) {
+      setRegisterError('Please agree to the Terms & Conditions');
+      return;
+    }
+    
     if (selectedRole) {
-      setAuthProgress(0);
-      setStep('authenticating');
+      // Register the new user
+      const result = registerNewUser({
+        email: regEmail,
+        password: regPassword,
+        role: selectedRole,
+        name: selectedRole === 'investor' ? fullName : orgName,
+        country: country,
+        preferredCurrency: preferredCurrency,
+        orgName: orgName,
+      });
+      
+      if (result.success && result.user) {
+        toast({
+          title: "Account Created!",
+          description: `Your User ID: ${result.user.id}`,
+        });
+        
+        // Show authenticating screen then redirect
+        setAuthProgress(0);
+        setStep('authenticating');
+      } else {
+        setRegisterError(result.error || 'Registration failed');
+      }
     }
   };
 
@@ -254,6 +311,11 @@ export default function Login() {
                       placeholder="••••••••"
                     />
                   </div>
+                  {loginError && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                      {loginError}
+                    </div>
+                  )}
                   
                   <GradientButton type="submit" className="w-full hover:scale-[1.02] transition-transform duration-300">
                     Login
@@ -576,6 +638,12 @@ export default function Login() {
                             </>
                           )}
                         </>
+                      )}
+                      
+                      {registerError && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                          {registerError}
+                        </div>
                       )}
                       
                       <GradientButton type="submit" className="w-full hover:scale-[1.02] transition-transform duration-300 mt-2">
