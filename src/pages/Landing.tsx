@@ -5,7 +5,7 @@ import { GlowCard } from "@/components/ui/glow-card";
 import { 
   Shield, Coins, TrendingUp, Globe, Calculator, ArrowRight, 
   Search, ChevronDown, Users, Layers, Eye, Lock, Wallet,
-  ArrowRightLeft, CheckCircle2
+  ArrowRightLeft, CheckCircle2, Mail, MapPin, Clock
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -428,22 +428,161 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 px-6">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xs">B</span>
+      <footer className="relative border-t border-border/30 bg-gradient-to-b from-background via-background to-muted/20">
+        {/* Top glow effect */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        
+        <div className="container mx-auto px-6 pt-16 pb-8">
+          {/* Main Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
+            
+            {/* About Section */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold text-sm">B</span>
+                </div>
+                <span className="text-xl font-bold text-foreground">BondFi</span>
               </div>
-              <span className="text-sm font-medium text-foreground">BondFi</span>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
+                BondFi is a blockchain-enabled platform that makes government bonds accessible through fractional ownership, transparent returns, and secure stablecoin settlement.
+              </p>
+              
+              {/* Trust Indicators */}
+              <div className="space-y-2">
+                {[
+                  "Government bond–backed instruments",
+                  "Secure, transparent, blockchain-powered",
+                  "Designed for long-term investors"
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Product Links */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">Product</h4>
+              <ul className="space-y-3">
+                {[
+                  "How BondFi Works",
+                  "Available Bonds",
+                  "Secondary Market",
+                  "Returns Calculator"
+                ].map((link, i) => (
+                  <li key={i}>
+                    <span className="text-sm text-muted-foreground hover:text-primary cursor-pointer transition-all duration-300 hover:translate-x-1 inline-block relative group">
+                      {link}
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company Links */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">Company</h4>
+              <ul className="space-y-3">
+                {[
+                  "About Us",
+                  "Security & Trust",
+                  "Compliance",
+                  "Contact Support"
+                ].map((link, i) => (
+                  <li key={i}>
+                    <span className="text-sm text-muted-foreground hover:text-primary cursor-pointer transition-all duration-300 hover:translate-x-1 inline-block relative group">
+                      {link}
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources Links */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">Resources</h4>
+              <ul className="space-y-3">
+                {[
+                  "Bond Education",
+                  "FAQs",
+                  "Risk Disclosure",
+                  "Terms & Conditions"
+                ].map((link, i) => (
+                  <li key={i}>
+                    <span className="text-sm text-muted-foreground hover:text-primary cursor-pointer transition-all duration-300 hover:translate-x-1 inline-block relative group">
+                      {link}
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Contact & Support Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-8 border-t border-border/30 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Mail className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Support Email</p>
+                <p className="text-sm font-medium text-foreground">support@bondfi.app</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Operating Region</p>
+                <p className="text-sm font-medium text-foreground">India</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Support Hours</p>
+                <p className="text-sm font-medium text-foreground">Mon–Fri | 9:00 AM – 6:00 PM IST</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="p-4 rounded-xl bg-muted/30 border border-border/30 backdrop-blur-sm mb-8">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-medium text-foreground">Risk Disclosure:</span> Investments involve market risks. Returns shown are indicative and based on historical data. Bond prices may fluctuate based on interest rate movements. Past performance does not guarantee future results. Please read all scheme-related documents carefully before investing.
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6 border-t border-border/30">
             <p className="text-sm text-muted-foreground">
-              © 2024 BondFi. Hackathon Demo Project.
+              © 2026 BondFi. All rights reserved.
             </p>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="hover:text-foreground cursor-pointer transition-colors">Terms</span>
-              <span className="hover:text-foreground cursor-pointer transition-colors">Privacy</span>
-              <span className="hover:text-foreground cursor-pointer transition-colors">Contact</span>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <span className="hover:text-primary cursor-pointer transition-all duration-300 relative group">
+                Privacy Policy
+                <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+              </span>
+              <span className="hover:text-primary cursor-pointer transition-all duration-300 relative group">
+                Terms of Service
+                <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+              </span>
+              <span className="hover:text-primary cursor-pointer transition-all duration-300 relative group">
+                Cookie Policy
+                <span className="absolute bottom-0 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+              </span>
             </div>
           </div>
         </div>
