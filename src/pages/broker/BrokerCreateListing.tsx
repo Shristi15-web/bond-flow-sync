@@ -484,19 +484,19 @@ export default function BrokerCreateListing() {
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="faceValue">Face Value (per unit) *</Label>
+                      <Label htmlFor="totalBondValue">Total Bond Value ($) *</Label>
                       <Input
-                        id="faceValue"
+                        id="totalBondValue"
                         type="number"
                         min={1}
-                        placeholder="e.g., 1000"
+                        placeholder="e.g., 1000000"
                         value={bondForm.value || ''}
                         onChange={(e) => updateBondForm({ value: parseFloat(e.target.value) || 0 })}
                         className="bg-muted/20 border-border/50"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="totalSupply">Total Issue Size (units) *</Label>
+                      <Label htmlFor="totalSupply">Number of Tokens (units) *</Label>
                       <Input
                         id="totalSupply"
                         type="number"
@@ -507,6 +507,39 @@ export default function BrokerCreateListing() {
                         className="bg-muted/20 border-border/50"
                       />
                     </div>
+                    
+                    {/* Auto-calculated Face Value */}
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <Label>Face Value (Auto-calculated)</Label>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+                          Auto
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          readOnly
+                          value={
+                            bondForm.value > 0 && bondForm.totalSupply > 0
+                              ? `$${(bondForm.value / bondForm.totalSupply).toFixed(2)} per token`
+                              : 'Enter Total Bond Value and Number of Tokens'
+                          }
+                          className="bg-primary/5 border-primary/30 text-foreground font-medium cursor-not-allowed"
+                        />
+                        {bondForm.value > 0 && bondForm.totalSupply > 0 && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <span className="text-xs text-muted-foreground">
+                              = {bondForm.value.toLocaleString()} ÷ {bondForm.totalSupply.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Face Value = Total Bond Value ÷ Number of Tokens
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="yield">Annual Yield (%) *</Label>
                       <Input

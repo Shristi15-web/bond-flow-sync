@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { GridBackground } from "@/components/ui/grid-background";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { GlowCard } from "@/components/ui/glow-card";
+import { AarthaChatbot } from "@/components/ui/aartha-chatbot";
 import { 
   Shield, Coins, TrendingUp, Globe, Calculator, ArrowRight, 
   Search, ChevronDown, Users, Layers, Eye, Lock, Wallet,
@@ -587,6 +588,9 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Aartha Chatbot */}
+      <AarthaChatbot />
     </GridBackground>
   );
 }
