@@ -5,6 +5,7 @@ import { Store, TrendingUp, DollarSign, Calendar, ShoppingCart, CheckCircle2, Lo
 import { Card } from "@/components/ui/card";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useToast } from "@/hooks/use-toast";
+import { OracleVerificationBadge } from "@/components/ui/oracle-verification-badge";
 
 type BuyStep = 'browse' | 'confirm' | 'processing' | 'success';
 
@@ -98,10 +99,14 @@ export default function InvestorSecondaryMarket() {
                             Your Listing
                           </span>
                         )}
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
-                          {listing.yield}% Yield
-                        </span>
+                        <OracleVerificationBadge listingYield={listing.yield} compact />
                       </div>
+                    </div>
+
+                    <div className="mb-2">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
+                        {listing.yield}% Yield
+                      </span>
                     </div>
 
                     <h4 className="font-semibold text-foreground mb-2">{bond.name}</h4>
@@ -196,6 +201,9 @@ export default function InvestorSecondaryMarket() {
                 <span className="text-foreground font-bold text-lg">${selectedListing.sellingPrice.toLocaleString()}</span>
               </div>
             </div>
+
+            {/* Oracle Verification */}
+            <OracleVerificationBadge listingYield={selectedListing.yield} className="mb-6" />
 
             <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 mb-6">
               <div className="flex justify-between">

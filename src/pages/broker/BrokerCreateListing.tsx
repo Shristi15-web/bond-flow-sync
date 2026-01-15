@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OracleVerificationBadge } from "@/components/ui/oracle-verification-badge";
 
 type CreateStep = 'basic' | 'financial' | 'investment' | 'risk' | 'review' | 'processing' | 'created';
 type ListStep = 'select' | 'configure' | 'validate' | 'processing' | 'success';
@@ -802,6 +803,11 @@ export default function BrokerCreateListing() {
                       <span className="text-primary font-bold text-lg">${(bondForm.value * bondForm.totalSupply).toLocaleString()}</span>
                     </div>
                   </div>
+
+                  {/* Oracle Rate Verification Preview */}
+                  {bondForm.yield > 0 && (
+                    <OracleVerificationBadge listingYield={bondForm.yield} showRefresh={false} />
+                  )}
                 </div>
 
                 <div className="mt-6 flex justify-between">
@@ -827,7 +833,7 @@ export default function BrokerCreateListing() {
 
             {/* Created */}
             {createStep === 'created' && (
-              <Card className="p-8 bg-gradient-to-br from-card/80 to-card/40 border-border/50 text-center animate-fade-in">
+              <Card className="p-8 bg-gradient-to-br from-card/80 to-card/40 border-border/50 animate-fade-in">
                 <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-6">
                   <CheckCircle className="w-8 h-8 text-success" />
                 </div>
@@ -835,6 +841,14 @@ export default function BrokerCreateListing() {
                 <p className="text-muted-foreground mb-6">
                   Your bond "{bondForm.name}" has been created and is ready for listing.
                 </p>
+                
+                {/* Oracle Verification Result */}
+                {bondForm.yield > 0 && (
+                  <div className="mb-6 max-w-md mx-auto">
+                    <OracleVerificationBadge listingYield={bondForm.yield} />
+                  </div>
+                )}
+
                 <div className="flex justify-center gap-4">
                   <Button variant="outline" onClick={resetCreateForm}>
                     Create Another
