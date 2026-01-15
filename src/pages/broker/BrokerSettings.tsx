@@ -18,7 +18,7 @@ export default function BrokerSettings() {
   });
 
   return (
-    <DashboardLayout title="Settings" subtitle="Manage your broker account preferences">
+    <DashboardLayout title="Settings" subtitle="Manage your lister account preferences">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Quick Links */}
         <Card className="p-6 bg-gradient-to-br from-card/80 to-card/40 border-border/50">

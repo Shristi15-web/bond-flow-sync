@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useBondContext } from "@/context/BondContext";
 import { Building2, Mail, Shield, Save, CheckCircle } from "lucide-react";
 
-const BROKER_PROFILE_KEY = 'bondfi_broker_profile';
+const BROKER_PROFILE_KEY = 'bondfi_lister_profile';
 
 interface BrokerProfile {
   organizationName: string;
@@ -47,7 +47,7 @@ export default function BrokerProfile() {
   };
 
   return (
-    <DashboardLayout title="Broker Profile" subtitle="View and manage your organization details">
+    <DashboardLayout title="Lister Profile" subtitle="View and manage your organization details">
       <div className="max-w-3xl mx-auto">
         <Card className="p-8 bg-gradient-to-br from-card/80 to-card/40 border-border/50 backdrop-blur-sm">
           {/* Header */}
@@ -57,7 +57,7 @@ export default function BrokerProfile() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-foreground">{profile.organizationName}</h2>
-              <p className="text-muted-foreground">Registered Broker</p>
+              <p className="text-muted-foreground">Registered Lister</p>
             </div>
           </div>
 

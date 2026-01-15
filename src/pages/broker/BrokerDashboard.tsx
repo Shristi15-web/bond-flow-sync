@@ -18,7 +18,7 @@ export default function BrokerDashboard() {
   const pendingDemands = 34;
 
   return (
-    <DashboardLayout title="Broker Dashboard" subtitle="Manage bond listings and investor demand">
+    <DashboardLayout title="Lister Dashboard" subtitle="Manage bond listings and investor demand">
       {/* Stats with listing-focused design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div 
