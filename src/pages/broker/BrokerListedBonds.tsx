@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useBondContext } from "@/context/BondContext";
 import { FileText, TrendingUp, X, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OracleVerificationBadge } from "@/components/ui/oracle-verification-badge";
 
 export default function BrokerListedBonds() {
   const { bonds, broker, transactions, currentUser } = useBondContext();
@@ -185,6 +186,9 @@ export default function BrokerListedBonds() {
                   <p className="text-lg font-bold text-foreground">{selectedBondData.maturityDate}</p>
                 </div>
               </div>
+
+              {/* Oracle Rate Verification */}
+              <OracleVerificationBadge listingYield={selectedBondData.yield} className="mb-6" />
 
               {/* Analytics */}
               {(() => {

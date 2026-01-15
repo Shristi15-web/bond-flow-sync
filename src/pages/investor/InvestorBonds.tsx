@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Bond } from "@/types/bond";
 import { GradientButton } from "@/components/ui/gradient-button";
+import { OracleVerificationBadge } from "@/components/ui/oracle-verification-badge";
 
 type BuyStep = 'details' | 'quantity' | 'confirm' | 'processing' | 'success';
 
@@ -170,10 +171,13 @@ export default function InvestorBonds() {
             {/* Step: Bond Details */}
             {buyStep === 'details' && (
               <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-foreground mb-1">{selectedBond.name}</h2>
+                <div className="flex items-start justify-between mb-1">
+                  <h2 className="text-2xl font-bold text-foreground">{selectedBond.name}</h2>
+                  <OracleVerificationBadge listingYield={selectedBond.yield} compact />
+                </div>
                 <p className="text-muted-foreground mb-6">{selectedBond.issuer}</p>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                       <Percent className="w-4 h-4" />
@@ -203,6 +207,12 @@ export default function InvestorBonds() {
                     <p className="text-xl font-bold text-foreground">{selectedBond.availableSupply} units</p>
                   </div>
                 </div>
+
+                {/* Oracle Verification Card */}
+                <OracleVerificationBadge 
+                  listingYield={selectedBond.yield} 
+                  className="mb-4"
+                />
                 
                 <GradientButton 
                   onClick={() => setBuyStep('quantity')} 
