@@ -65,7 +65,7 @@ const navItems: Record<UserRole, NavItem[]> = {
 
 const roleLabels: Record<UserRole, string> = {
   investor: "Investor",
-  broker: "Broker",
+  broker: "Lister",
   custodian: "Custodian",
   financial_institution: "Financial Institution",
   government_partner: "Government Partner",

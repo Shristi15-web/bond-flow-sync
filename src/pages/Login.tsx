@@ -16,7 +16,7 @@ type Step = 'role' | 'auth' | 'authenticating' | 'approved';
 
 const roleLabels: Record<UserRole, string> = {
   investor: 'Investor',
-  broker: 'Broker',
+  broker: 'Lister',
   custodian: 'Custodian',
   financial_institution: 'Financial Institution',
   government_partner: 'Government Partner',

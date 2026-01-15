@@ -19,7 +19,7 @@ interface SupportTicket {
   createdAt: string;
 }
 
-const BROKER_TICKETS_STORAGE_KEY = 'bondfi_broker_support_tickets';
+const BROKER_TICKETS_STORAGE_KEY = 'bondfi_lister_support_tickets';
 
 function loadTickets(): SupportTicket[] {
   try {
@@ -36,7 +36,7 @@ function saveTickets(tickets: SupportTicket[]): void {
 
 function generateTicketId(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = 'BRK-';
+  let result = 'LST-';
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -87,7 +87,7 @@ export default function BrokerSupport() {
   };
 
   return (
-    <DashboardLayout title="Broker Support" subtitle="Get help with listings, compliance, or technical issues">
+    <DashboardLayout title="Lister Support" subtitle="Get help with listings, compliance, or technical issues">
       <div className="max-w-4xl mx-auto">
         {/* Tab Navigation */}
         <div className="flex gap-4 mb-8">
@@ -233,7 +233,7 @@ export default function BrokerSupport() {
                 <Input
                   value={searchTicketId}
                   onChange={(e) => setSearchTicketId(e.target.value)}
-                  placeholder="Enter your Ticket ID (e.g., BRK-ABC123)"
+                  placeholder="Enter your Ticket ID (e.g., LST-ABC123)"
                   className="bg-muted/20 border-border/50 flex-1"
                 />
                 <Button onClick={handleSearchTicket} className="gap-2">
