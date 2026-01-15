@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBondContext } from "@/context/BondContext";
-import { Wallet, TrendingUp, PiggyBank, Calendar, Coins, ChevronDown, Store, DollarSign, CheckCircle2, Loader2, X } from "lucide-react";
+import { Wallet, TrendingUp, PiggyBank, Calendar, Coins, ChevronDown, Store, CheckCircle2, Loader2, X, AlertTriangle, Info } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useToast } from "@/hooks/use-toast";
+import { calculateFairMarketValue, BondPricingResult } from "@/lib/bondPricing";
 
 type SellStep = 'idle' | 'form' | 'processing' | 'success';
 
@@ -15,7 +16,7 @@ export default function InvestorPortfolio() {
   const [sellStep, setSellStep] = useState<SellStep>('idle');
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
   const [sellQuantity, setSellQuantity] = useState<string>("");
-  const [sellPrice, setSellPrice] = useState<string>("");
+  const [pricingResult, setPricingResult] = useState<BondPricingResult | null>(null);
 
   const toggleCard = (purchaseId: string) => {
     setExpandedCard(expandedCard === purchaseId ? null : purchaseId);
@@ -30,24 +31,57 @@ export default function InvestorPortfolio() {
   const handleSellClick = (purchaseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const purchase = investor.purchases.find(p => p.id === purchaseId);
-    if (purchase) {
+    const bond = purchase ? getBondById(purchase.bondId) : null;
+    
+    if (purchase && bond) {
       setSelectedPurchaseId(purchaseId);
       setSellQuantity(purchase.amount.toString());
-      setSellPrice(purchase.purchasePrice.toString());
+      
+      // Calculate fair market value based on time to maturity
+      const pricing = calculateFairMarketValue({
+        faceValue: purchase.purchasePrice,
+        couponRate: bond.yield,
+        purchaseDate: purchase.purchaseDate,
+        maturityDate: purchase.maturityDate,
+      });
+      
+      setPricingResult(pricing);
       setSellStep('form');
     }
   };
 
+  // Recalculate price when quantity changes
+  useEffect(() => {
+    if (selectedPurchaseId && sellQuantity) {
+      const purchase = investor.purchases.find(p => p.id === selectedPurchaseId);
+      const bond = purchase ? getBondById(purchase.bondId) : null;
+      
+      if (purchase && bond) {
+        const quantity = parseInt(sellQuantity) || 0;
+        const ratio = quantity / purchase.amount;
+        const proportionalValue = purchase.purchasePrice * ratio;
+        
+        const pricing = calculateFairMarketValue({
+          faceValue: proportionalValue,
+          couponRate: bond.yield,
+          purchaseDate: purchase.purchaseDate,
+          maturityDate: purchase.maturityDate,
+        });
+        
+        setPricingResult(pricing);
+      }
+    }
+  }, [sellQuantity, selectedPurchaseId, investor.purchases, getBondById]);
+
   const handleConfirmSell = async () => {
-    if (!selectedPurchaseId) return;
+    if (!selectedPurchaseId || !pricingResult) return;
 
     const quantity = parseInt(sellQuantity) || 0;
-    const price = parseFloat(sellPrice) || 0;
 
-    if (quantity <= 0 || price <= 0) {
+    if (quantity <= 0) {
       toast({
         title: "Invalid Input",
-        description: "Please enter valid quantity and price",
+        description: "Please enter a valid quantity",
         variant: "destructive",
       });
       return;
@@ -58,7 +92,8 @@ export default function InvestorPortfolio() {
     // Simulate processing
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const result = listBondForSale(selectedPurchaseId, quantity, price);
+    // Use the fair market value (discounted price) - no manual override
+    const result = listBondForSale(selectedPurchaseId, quantity, pricingResult.fairMarketValue);
 
     if (result.success) {
       setSellStep('success');
@@ -76,7 +111,7 @@ export default function InvestorPortfolio() {
     setSellStep('idle');
     setSelectedPurchaseId(null);
     setSellQuantity("");
-    setSellPrice("");
+    setPricingResult(null);
   };
 
   const selectedPurchase = selectedPurchaseId 
@@ -273,10 +308,10 @@ export default function InvestorPortfolio() {
       {/* Sell Modal */}
       {sellStep !== 'idle' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-md mx-4 animate-scale-in">
+          <div className="relative w-full max-w-lg mx-4 animate-scale-in">
             {/* Form Step */}
-            {sellStep === 'form' && selectedPurchase && selectedBond && (
-              <div className="rounded-2xl border border-border/50 bg-card p-8">
+            {sellStep === 'form' && selectedPurchase && selectedBond && pricingResult && (
+              <div className="rounded-2xl border border-border/50 bg-card p-8 max-h-[90vh] overflow-y-auto">
                 <button
                   onClick={handleCloseSellModal}
                   className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
@@ -289,48 +324,105 @@ export default function InvestorPortfolio() {
                     <Store className="w-5 h-5 text-warning" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-foreground">Sell Bond</h3>
-                    <p className="text-sm text-muted-foreground">List on Secondary Market</p>
+                    <h3 className="text-lg font-bold text-foreground">Sell Bond Before Maturity</h3>
+                    <p className="text-sm text-muted-foreground">Fair Market Value Pricing Applied</p>
                   </div>
                 </div>
+
+                {/* Warning Banner */}
+                {pricingResult.isBeforeMaturity && (
+                  <div className="p-4 rounded-xl bg-warning/10 border border-warning/30 mb-6">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-warning text-sm">Early Sale Notice</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Selling before maturity applies a fair market discount. 
+                          You will not receive future interest payments.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-4 rounded-xl bg-muted/20 border border-border/30 mb-6">
                   <p className="font-semibold text-foreground">{selectedBond.name}</p>
                   <p className="text-sm text-muted-foreground">{selectedBond.issuer}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Owned: {selectedPurchase.amount} units
-                  </p>
+                  <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Owned: </span>
+                      <span className="text-foreground font-medium">{selectedPurchase.amount} units</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Maturity: </span>
+                      <span className="text-foreground font-medium">{selectedPurchase.maturityDate}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="text-sm text-muted-foreground mb-2 block">Quantity to Sell</label>
-                    <input
-                      type="number"
-                      value={sellQuantity}
-                      onChange={(e) => setSellQuantity(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
-                      max={selectedPurchase.amount}
-                      min="1"
-                    />
+                {/* Quantity Input */}
+                <div className="mb-6">
+                  <label className="text-sm text-muted-foreground mb-2 block">Quantity to Sell</label>
+                  <input
+                    type="number"
+                    value={sellQuantity}
+                    onChange={(e) => setSellQuantity(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
+                    max={selectedPurchase.amount}
+                    min="1"
+                  />
+                </div>
+
+                {/* Pricing Breakdown */}
+                <div className="p-5 rounded-xl bg-gradient-to-br from-muted/20 to-muted/10 border border-border/30 mb-6 space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Info className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-medium text-foreground">Fair Market Value Calculation</p>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground mb-2 block">Selling Price ($)</label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <input
-                        type="number"
-                        value={sellPrice}
-                        onChange={(e) => setSellPrice(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Original price: ${selectedPurchase.purchasePrice.toLocaleString()}
-                    </p>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Original Investment</span>
+                    <span className="text-foreground font-medium">${pricingResult.originalValue.toLocaleString()}</span>
                   </div>
+                  
+                  {pricingResult.isBeforeMaturity && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Days Until Maturity</span>
+                        <span className="text-foreground">{pricingResult.daysUntilMaturity} days</span>
+                      </div>
+                      
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Remaining Periods</span>
+                        <span className="text-foreground">{pricingResult.remainingPeriods}</span>
+                      </div>
+                      
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span>Interest Forfeited</span>
+                        <span>-${pricingResult.forfeitedInterest.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span>Discount Applied ({pricingResult.discountPercentage.toFixed(1)}%)</span>
+                        <span>-${pricingResult.discountAmount.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="h-px bg-border/50 my-2" />
+                    </>
+                  )}
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-foreground">Secondary Market Price</span>
+                    <span className="text-xl font-bold text-primary">${pricingResult.fairMarketValue.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Notice */}
+                <div className="p-3 rounded-lg bg-muted/10 mb-6">
+                  <p className="text-xs text-muted-foreground text-center">
+                    This price is calculated using the fair market value formula. 
+                    Manual price override is not available to ensure market integrity.
+                  </p>
                 </div>
 
                 <div className="flex gap-3">
@@ -341,7 +433,7 @@ export default function InvestorPortfolio() {
                     Cancel
                   </button>
                   <GradientButton className="flex-1" onClick={handleConfirmSell}>
-                    List for Sale
+                    List at ${pricingResult.fairMarketValue.toLocaleString()}
                   </GradientButton>
                 </div>
               </div>
@@ -362,7 +454,7 @@ export default function InvestorPortfolio() {
             )}
 
             {/* Success Step */}
-            {sellStep === 'success' && (
+            {sellStep === 'success' && pricingResult && (
               <div className="rounded-2xl border border-border/50 bg-card p-10 text-center">
                 <div className="relative w-20 h-20 mx-auto mb-6">
                   <div className="absolute inset-0 rounded-full bg-green-500/20 blur-xl animate-pulse" />
@@ -371,9 +463,18 @@ export default function InvestorPortfolio() {
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">Listed Successfully!</h3>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted-foreground mb-2">
                   Your bond is now listed on the Secondary Market
                 </p>
+                {pricingResult.isBeforeMaturity && (
+                  <p className="text-xs text-warning mb-4">
+                    Sold before maturity (discount applied)
+                  </p>
+                )}
+                <div className="p-4 rounded-xl bg-muted/20 mb-6">
+                  <p className="text-sm text-muted-foreground">Listing Price</p>
+                  <p className="text-2xl font-bold text-primary">${pricingResult.fairMarketValue.toLocaleString()}</p>
+                </div>
                 <GradientButton className="w-full" onClick={handleCloseSellModal}>
                   Done
                 </GradientButton>
