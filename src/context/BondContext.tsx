@@ -43,6 +43,38 @@ export interface BondListing {
   createdAt: string;
 }
 
+export interface SecondaryMarketListing {
+  id: string;
+  purchaseId: string;
+  bondId: string;
+  sellerId: string;
+  quantity: number;
+  sellingPrice: number;
+  originalPrice: number;
+  yield: number;
+  listedAt: string;
+  status: 'listed' | 'sold' | 'cancelled';
+}
+
+export interface BankAccount {
+  id: string;
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  accountType: 'savings' | 'current';
+}
+
+export interface WalletTransaction {
+  id: string;
+  type: 'purchase' | 'sale' | 'topup' | 'withdrawal';
+  amount: number;
+  description: string;
+  timestamp: string;
+  status: 'completed' | 'pending' | 'failed';
+  bondName?: string;
+}
+
 interface BondContextType {
   // Data
   bonds: Bond[];
@@ -54,6 +86,10 @@ interface BondContextType {
   governmentPartner: GovernmentPartner;
   complianceMetrics: ComplianceMetrics;
   listings: BondListing[];
+  secondaryMarketListings: SecondaryMarketListing[];
+  bankAccount: BankAccount | null;
+  walletTransactions: WalletTransaction[];
+  availableForPayout: number;
   
   // Auth
   currentUser: { role: UserRole; id: string } | null;
@@ -69,6 +105,14 @@ interface BondContextType {
   listBond: (bondId: string, config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }) => { success: boolean; error?: string };
   createBond: (bond: Omit<Bond, 'id' | 'createdAt' | 'status'>) => string;
   confirmSettlement: (transactionId: string) => void;
+  
+  // Secondary Market Actions
+  listBondForSale: (purchaseId: string, quantity: number, sellingPrice: number) => { success: boolean; error?: string };
+  buyFromSecondaryMarket: (listingId: string) => { success: boolean; error?: string };
+  
+  // Wallet Actions
+  saveBankAccount: (account: Omit<BankAccount, 'id'>) => void;
+  withdrawFunds: (amount: number) => Promise<{ success: boolean; error?: string }>;
   
   // Helpers
   getBondById: (id: string) => Bond | undefined;
@@ -90,6 +134,10 @@ interface StoredData {
   governmentPartner: GovernmentPartner;
   complianceMetrics: ComplianceMetrics;
   listings: BondListing[];
+  secondaryMarketListings: SecondaryMarketListing[];
+  bankAccount: BankAccount | null;
+  walletTransactions: WalletTransaction[];
+  availableForPayout: number;
 }
 
 function loadFromStorage(): StoredData | null {
@@ -130,6 +178,14 @@ export function BondProvider({ children }: { children: ReactNode }) {
     stored?.complianceMetrics || initialComplianceMetrics
   );
   const [listings, setListings] = useState<BondListing[]>(stored?.listings || []);
+  const [secondaryMarketListings, setSecondaryMarketListings] = useState<SecondaryMarketListing[]>(
+    stored?.secondaryMarketListings || []
+  );
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(stored?.bankAccount || null);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(
+    stored?.walletTransactions || []
+  );
+  const [availableForPayout, setAvailableForPayout] = useState<number>(stored?.availableForPayout || 0);
   
   // Load persisted user session
   const [currentUser, setCurrentUser] = useState<{ role: UserRole; id: string } | null>(() => {
@@ -154,8 +210,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
       governmentPartner,
       complianceMetrics,
       listings,
+      secondaryMarketListings,
+      bankAccount,
+      walletTransactions,
+      availableForPayout,
     });
-  }, [bonds, transactions, investor, broker, custodian, financialInstitution, governmentPartner, complianceMetrics, listings]);
+  }, [bonds, transactions, investor, broker, custodian, financialInstitution, governmentPartner, complianceMetrics, listings, secondaryMarketListings, bankAccount, walletTransactions, availableForPayout]);
 
   const login = (role: UserRole) => {
     const userIds: Record<UserRole, string> = {
@@ -167,7 +227,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     };
     const user = { role, id: userIds[role] };
     setCurrentUser(user);
-    // Persist session to localStorage
     localStorage.setItem('bondfi_session', JSON.stringify(user));
   };
 
@@ -188,6 +247,17 @@ export function BondProvider({ children }: { children: ReactNode }) {
       ...prev,
       balance: prev.balance + amount,
     }));
+
+    // Add wallet transaction
+    const newWalletTx: WalletTransaction = {
+      id: `wtx-${Date.now()}`,
+      type: 'topup',
+      amount,
+      description: `Purchased ${amount} USDT stablecoins`,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+    };
+    setWalletTransactions(prev => [...prev, newWalletTx]);
 
     // Add transaction
     const newTransaction: Transaction = {
@@ -212,7 +282,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     const purchaseValue = (amount / bond.totalSupply) * bond.value * amount;
     
-    // Check if investor has enough balance
     if (investor.balance < purchaseValue) {
       console.warn('Insufficient balance');
       return;
@@ -220,7 +289,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     
     const expectedReturn = (purchaseValue * bond.yield) / 100;
 
-    // Update investor
     const newPurchase: BondPurchase = {
       id: `purchase-${Date.now()}`,
       bondId,
@@ -240,14 +308,24 @@ export function BondProvider({ children }: { children: ReactNode }) {
       purchases: [...prev.purchases, newPurchase],
     }));
 
-    // Update bond supply
     setBonds(prev =>
       prev.map(b =>
         b.id === bondId ? { ...b, availableSupply: b.availableSupply - amount } : b
       )
     );
 
-    // Add transaction
+    // Add wallet transaction
+    const newWalletTx: WalletTransaction = {
+      id: `wtx-${Date.now()}`,
+      type: 'purchase',
+      amount: purchaseValue,
+      description: `Purchased ${amount} units of ${bond.name}`,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      bondName: bond.name,
+    };
+    setWalletTransactions(prev => [...prev, newWalletTx]);
+
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'purchase',
@@ -263,21 +341,18 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     setTransactions(prev => [...prev, newTransaction]);
 
-    // Update compliance metrics
     setComplianceMetrics(prev => ({
       ...prev,
       totalInvestments: prev.totalInvestments + purchaseValue,
       settlementsToday: prev.settlementsToday + 1,
     }));
 
-    // Update broker volume
     setBroker(prev => ({
       ...prev,
       transactionVolume: prev.transactionVolume + purchaseValue,
     }));
   };
 
-  // Check for overlapping listings
   const hasOverlappingListing = (bondId: string, startDate: string, endDate: string): boolean => {
     return listings.some(listing => {
       if (listing.bondId !== bondId || listing.status !== 'active') return false;
@@ -285,7 +360,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       const existingEnd = new Date(listing.listingEndDate);
       const newStart = new Date(startDate);
       const newEnd = new Date(endDate);
-      // Check if date ranges overlap
       return newStart <= existingEnd && newEnd >= existingStart;
     });
   };
@@ -294,7 +368,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
     bondId: string,
     config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }
   ): { success: boolean; error?: string } => {
-    // Check for duplicate/overlapping listing
     if (hasOverlappingListing(bondId, config.listingStartDate, config.listingEndDate)) {
       return { success: false, error: 'This bond already has an active listing with overlapping dates' };
     }
@@ -304,7 +377,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Bond not found' };
     }
 
-    // Create the listing
     const newListing: BondListing = {
       id: `listing-${Date.now()}`,
       bondId,
@@ -318,19 +390,16 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     setListings(prev => [...prev, newListing]);
 
-    // Update bond status to listed
     setBonds(prev =>
       prev.map(b => (b.id === bondId ? { ...b, status: 'listed' as const } : b))
     );
 
-    // Update broker
     setBroker(prev => ({
       ...prev,
       listedBonds: prev.listedBonds.includes(bondId) ? prev.listedBonds : [...prev.listedBonds, bondId],
       totalListings: prev.totalListings + 1,
     }));
 
-    // Add transaction
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'listing',
@@ -359,20 +428,17 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     setBonds(prev => [...prev, newBond]);
 
-    // Update broker stats for broker-created bonds
     setBroker(prev => ({
       ...prev,
       totalListings: prev.totalListings + 1,
     }));
 
-    // Update custodian
     setCustodian(prev => ({
       ...prev,
       bondsInCustody: [...prev.bondsInCustody, newBond.id],
       totalCustodyValue: prev.totalCustodyValue + bondData.value * bondData.totalSupply,
     }));
 
-    // Add transaction
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'issuance',
@@ -387,7 +453,6 @@ export function BondProvider({ children }: { children: ReactNode }) {
 
     setTransactions(prev => [...prev, newTransaction]);
 
-    // Update compliance metrics
     setComplianceMetrics(prev => ({
       ...prev,
       totalBondsIssued: prev.totalBondsIssued + 1,
@@ -410,6 +475,168 @@ export function BondProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  // Secondary Market: List bond for sale
+  const listBondForSale = (purchaseId: string, quantity: number, sellingPrice: number): { success: boolean; error?: string } => {
+    const purchase = investor.purchases.find(p => p.id === purchaseId);
+    if (!purchase) {
+      return { success: false, error: 'Purchase not found' };
+    }
+
+    if (quantity > purchase.amount) {
+      return { success: false, error: 'Cannot sell more than owned quantity' };
+    }
+
+    const bond = bonds.find(b => b.id === purchase.bondId);
+    if (!bond) {
+      return { success: false, error: 'Bond not found' };
+    }
+
+    // Check if already listed
+    const existingListing = secondaryMarketListings.find(
+      l => l.purchaseId === purchaseId && l.status === 'listed'
+    );
+    if (existingListing) {
+      return { success: false, error: 'This bond is already listed for sale' };
+    }
+
+    const newListing: SecondaryMarketListing = {
+      id: `sm-${Date.now()}`,
+      purchaseId,
+      bondId: purchase.bondId,
+      sellerId: investor.id,
+      quantity,
+      sellingPrice,
+      originalPrice: purchase.purchasePrice,
+      yield: bond.yield,
+      listedAt: new Date().toISOString(),
+      status: 'listed',
+    };
+
+    setSecondaryMarketListings(prev => [...prev, newListing]);
+
+    // Update purchase status
+    setInvestor(prev => ({
+      ...prev,
+      purchases: prev.purchases.map(p =>
+        p.id === purchaseId ? { ...p, status: 'sold' as const } : p
+      ),
+    }));
+
+    return { success: true };
+  };
+
+  // Secondary Market: Buy from another investor
+  const buyFromSecondaryMarket = (listingId: string): { success: boolean; error?: string } => {
+    const listing = secondaryMarketListings.find(l => l.id === listingId);
+    if (!listing || listing.status !== 'listed') {
+      return { success: false, error: 'Listing not found or no longer available' };
+    }
+
+    if (investor.balance < listing.sellingPrice) {
+      return { success: false, error: 'Insufficient balance' };
+    }
+
+    const bond = bonds.find(b => b.id === listing.bondId);
+    if (!bond) {
+      return { success: false, error: 'Bond not found' };
+    }
+
+    // Deduct from buyer's balance
+    setInvestor(prev => ({
+      ...prev,
+      balance: prev.balance - listing.sellingPrice,
+      totalInvested: prev.totalInvested + listing.sellingPrice,
+      purchases: [
+        ...prev.purchases,
+        {
+          id: `purchase-${Date.now()}`,
+          bondId: listing.bondId,
+          investorId: investor.id,
+          amount: listing.quantity,
+          purchasePrice: listing.sellingPrice,
+          purchaseDate: new Date().toISOString().split('T')[0],
+          expectedReturn: (listing.sellingPrice * listing.yield) / 100,
+          maturityDate: bond.maturityDate,
+          status: 'active',
+        },
+      ],
+    }));
+
+    // Mark listing as sold
+    setSecondaryMarketListings(prev =>
+      prev.map(l => (l.id === listingId ? { ...l, status: 'sold' as const } : l))
+    );
+
+    // Credit seller's payout balance (simulating other investor)
+    setAvailableForPayout(prev => prev + listing.sellingPrice);
+
+    // Add wallet transactions
+    const buyWalletTx: WalletTransaction = {
+      id: `wtx-${Date.now()}`,
+      type: 'purchase',
+      amount: listing.sellingPrice,
+      description: `Bought ${listing.quantity} units of ${bond.name} from secondary market`,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      bondName: bond.name,
+    };
+    setWalletTransactions(prev => [...prev, buyWalletTx]);
+
+    // Add transaction record
+    const newTransaction: Transaction = {
+      id: `tx-${Date.now()}`,
+      type: 'sale',
+      bondId: listing.bondId,
+      fromId: listing.sellerId,
+      toId: investor.id,
+      amount: listing.quantity,
+      value: listing.sellingPrice,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      description: `Secondary market purchase: ${listing.quantity} units of ${bond.name}`,
+    };
+    setTransactions(prev => [...prev, newTransaction]);
+
+    return { success: true };
+  };
+
+  // Wallet: Save bank account
+  const saveBankAccount = (account: Omit<BankAccount, 'id'>) => {
+    const newAccount: BankAccount = {
+      ...account,
+      id: `bank-${Date.now()}`,
+    };
+    setBankAccount(newAccount);
+  };
+
+  // Wallet: Withdraw funds
+  const withdrawFunds = async (amount: number): Promise<{ success: boolean; error?: string }> => {
+    if (amount > availableForPayout) {
+      return { success: false, error: 'Insufficient payout balance' };
+    }
+
+    if (!bankAccount) {
+      return { success: false, error: 'No bank account linked' };
+    }
+
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 8000));
+
+    setAvailableForPayout(prev => prev - amount);
+
+    const withdrawalTx: WalletTransaction = {
+      id: `wtx-${Date.now()}`,
+      type: 'withdrawal',
+      amount,
+      description: `Withdrawal to ${bankAccount.bankName} - ****${bankAccount.accountNumber.slice(-4)}`,
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+    };
+    setWalletTransactions(prev => [...prev, withdrawalTx]);
+
+    return { success: true };
+  };
+
   const getBondById = (id: string) => bonds.find(b => b.id === id);
   const getTransactionsByBond = (bondId: string) => transactions.filter(t => t.bondId === bondId);
 
@@ -425,6 +652,10 @@ export function BondProvider({ children }: { children: ReactNode }) {
         governmentPartner,
         complianceMetrics,
         listings,
+        secondaryMarketListings,
+        bankAccount,
+        walletTransactions,
+        availableForPayout,
         currentUser,
         login,
         logout,
@@ -434,6 +665,10 @@ export function BondProvider({ children }: { children: ReactNode }) {
         listBond,
         createBond,
         confirmSettlement,
+        listBondForSale,
+        buyFromSecondaryMarket,
+        saveBankAccount,
+        withdrawFunds,
         getBondById,
         getTransactionsByBond,
         hasOverlappingListing,

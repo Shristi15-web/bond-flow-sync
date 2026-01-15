@@ -1,16 +1,88 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBondContext } from "@/context/BondContext";
-import { Wallet, TrendingUp, PiggyBank, Calendar, Coins, ChevronDown, ChevronUp } from "lucide-react";
+import { Wallet, TrendingUp, PiggyBank, Calendar, Coins, ChevronDown, Store, DollarSign, CheckCircle2, Loader2, X } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
-import { useState } from "react";
+import { GradientButton } from "@/components/ui/gradient-button";
+import { useToast } from "@/hooks/use-toast";
+
+type SellStep = 'idle' | 'form' | 'processing' | 'success';
 
 export default function InvestorPortfolio() {
-  const { investor, getBondById } = useBondContext();
+  const { investor, getBondById, listBondForSale, secondaryMarketListings } = useBondContext();
+  const { toast } = useToast();
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [sellStep, setSellStep] = useState<SellStep>('idle');
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+  const [sellQuantity, setSellQuantity] = useState<string>("");
+  const [sellPrice, setSellPrice] = useState<string>("");
 
   const toggleCard = (purchaseId: string) => {
     setExpandedCard(expandedCard === purchaseId ? null : purchaseId);
   };
+
+  const isListedForSale = (purchaseId: string) => {
+    return secondaryMarketListings.some(
+      l => l.purchaseId === purchaseId && l.status === 'listed'
+    );
+  };
+
+  const handleSellClick = (purchaseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const purchase = investor.purchases.find(p => p.id === purchaseId);
+    if (purchase) {
+      setSelectedPurchaseId(purchaseId);
+      setSellQuantity(purchase.amount.toString());
+      setSellPrice(purchase.purchasePrice.toString());
+      setSellStep('form');
+    }
+  };
+
+  const handleConfirmSell = async () => {
+    if (!selectedPurchaseId) return;
+
+    const quantity = parseInt(sellQuantity) || 0;
+    const price = parseFloat(sellPrice) || 0;
+
+    if (quantity <= 0 || price <= 0) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter valid quantity and price",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSellStep('processing');
+
+    // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const result = listBondForSale(selectedPurchaseId, quantity, price);
+
+    if (result.success) {
+      setSellStep('success');
+    } else {
+      toast({
+        title: "Failed to List",
+        description: result.error,
+        variant: "destructive",
+      });
+      setSellStep('idle');
+    }
+  };
+
+  const handleCloseSellModal = () => {
+    setSellStep('idle');
+    setSelectedPurchaseId(null);
+    setSellQuantity("");
+    setSellPrice("");
+  };
+
+  const selectedPurchase = selectedPurchaseId 
+    ? investor.purchases.find(p => p.id === selectedPurchaseId) 
+    : null;
+  const selectedBond = selectedPurchase ? getBondById(selectedPurchase.bondId) : null;
 
   return (
     <DashboardLayout title="My Portfolio" subtitle="Track your bond investments and holdings">
@@ -45,7 +117,7 @@ export default function InvestorPortfolio() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <StatCard 
             title="Active Holdings" 
-            value={investor.purchases.length} 
+            value={investor.purchases.filter(p => p.status === 'active').length} 
             icon={<Calendar className="w-5 h-5" />} 
           />
         </div>
@@ -63,6 +135,7 @@ export default function InvestorPortfolio() {
             {investor.purchases.map((purchase) => {
               const bond = getBondById(purchase.bondId);
               const isExpanded = expandedCard === purchase.id;
+              const isListed = isListedForSale(purchase.id);
               
               return bond ? (
                 <div 
@@ -83,7 +156,14 @@ export default function InvestorPortfolio() {
                         </div>
                         <div>
                           <p className="font-semibold text-foreground text-lg">{bond.name}</p>
-                          <p className="text-sm text-muted-foreground">{bond.issuer}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground">{bond.issuer}</p>
+                            {isListed && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-warning/20 text-warning font-medium">
+                                Listed for Sale
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -135,7 +215,7 @@ export default function InvestorPortfolio() {
                           </div>
                           <div className="p-3 rounded-lg bg-primary/10">
                             <p className="text-xs text-muted-foreground mb-1">Status</p>
-                            <p className="text-primary font-medium">Active</p>
+                            <p className="text-primary font-medium capitalize">{purchase.status}</p>
                           </div>
                         </div>
                         
@@ -161,6 +241,19 @@ export default function InvestorPortfolio() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Sell Bond Button */}
+                        {purchase.status === 'active' && !isListed && (
+                          <div className="mt-4">
+                            <button
+                              onClick={(e) => handleSellClick(purchase.id, e)}
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20 transition-all duration-300"
+                            >
+                              <Store className="w-4 h-4" />
+                              Sell on Secondary Market
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -176,6 +269,119 @@ export default function InvestorPortfolio() {
           </div>
         )}
       </div>
+
+      {/* Sell Modal */}
+      {sellStep !== 'idle' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-4 animate-scale-in">
+            {/* Form Step */}
+            {sellStep === 'form' && selectedPurchase && selectedBond && (
+              <div className="rounded-2xl border border-border/50 bg-card p-8">
+                <button
+                  onClick={handleCloseSellModal}
+                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center">
+                    <Store className="w-5 h-5 text-warning" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Sell Bond</h3>
+                    <p className="text-sm text-muted-foreground">List on Secondary Market</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/20 border border-border/30 mb-6">
+                  <p className="font-semibold text-foreground">{selectedBond.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedBond.issuer}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Owned: {selectedPurchase.amount} units
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Quantity to Sell</label>
+                    <input
+                      type="number"
+                      value={sellQuantity}
+                      onChange={(e) => setSellQuantity(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
+                      max={selectedPurchase.amount}
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Selling Price ($)</label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <input
+                        type="number"
+                        value={sellPrice}
+                        onChange={(e) => setSellPrice(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Original price: ${selectedPurchase.purchasePrice.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCloseSellModal}
+                    className="flex-1 px-6 py-3 rounded-xl bg-muted/50 text-muted-foreground hover:bg-muted transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <GradientButton className="flex-1" onClick={handleConfirmSell}>
+                    List for Sale
+                  </GradientButton>
+                </div>
+              </div>
+            )}
+
+            {/* Processing Step */}
+            {sellStep === 'processing' && (
+              <div className="rounded-2xl border border-border/50 bg-card p-10 text-center">
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/30">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">Listing Bond...</h3>
+                <p className="text-muted-foreground">Please wait while we process your request</p>
+              </div>
+            )}
+
+            {/* Success Step */}
+            {sellStep === 'success' && (
+              <div className="rounded-2xl border border-border/50 bg-card p-10 text-center">
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 rounded-full bg-green-500/20 blur-xl animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center border border-green-500/30">
+                    <CheckCircle2 className="w-10 h-10 text-green-500" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">Listed Successfully!</h3>
+                <p className="text-muted-foreground mb-6">
+                  Your bond is now listed on the Secondary Market
+                </p>
+                <GradientButton className="w-full" onClick={handleCloseSellModal}>
+                  Done
+                </GradientButton>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
