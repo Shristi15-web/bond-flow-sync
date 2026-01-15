@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useBondContext } from "@/context/BondContext";
+import { ListerSubType } from "@/types/bond";
 import { 
   Plus, FileText, CheckCircle, AlertCircle, Loader2, ArrowRight, 
   TrendingUp, Building, Globe, Wallet, Calendar, Percent, Shield 
@@ -28,6 +29,7 @@ interface NewBondForm {
   name: string;
   issuer: string;
   issuerType: 'Government' | 'Sovereign' | 'PSU' | '';
+  listerSubType: ListerSubType | '';
   country: string;
   description: string;
   // Financial Details
@@ -52,6 +54,7 @@ const initialBondForm: NewBondForm = {
   name: '',
   issuer: '',
   issuerType: '',
+  listerSubType: '',
   country: '',
   description: '',
   value: 0,
@@ -106,6 +109,7 @@ export default function BrokerCreateListing() {
     if (!bondForm.name.trim()) errors.push('Bond name is required');
     if (!bondForm.issuer.trim()) errors.push('Issuer name is required');
     if (!bondForm.issuerType) errors.push('Issuer type is required');
+    if (!bondForm.listerSubType) errors.push('Lister sub-type is required');
     if (!bondForm.country.trim()) errors.push('Country/Region is required');
     setCreateErrors(errors);
     return errors.length === 0;
@@ -172,6 +176,7 @@ export default function BrokerCreateListing() {
         maturityDate: bondForm.maturityDate,
         custodianId: 'custodian-001',
         description: bondForm.description || `${bondForm.issuerType} bond issued by ${bondForm.issuer}`,
+        listerSubType: bondForm.listerSubType as ListerSubType,
       });
       
       setCreatedBondId(newBondId);
@@ -394,6 +399,23 @@ export default function BrokerCreateListing() {
                           <SelectItem value="Government">Government</SelectItem>
                           <SelectItem value="Sovereign">Sovereign</SelectItem>
                           <SelectItem value="PSU">PSU (Public Sector)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Lister Sub-Type *</Label>
+                      <Select 
+                        value={bondForm.listerSubType} 
+                        onValueChange={(v) => updateBondForm({ listerSubType: v as ListerSubType })}
+                      >
+                        <SelectTrigger className="bg-muted/20 border-border/50">
+                          <SelectValue placeholder="Select lister type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Broker">Broker</SelectItem>
+                          <SelectItem value="Custodian">Custodian</SelectItem>
+                          <SelectItem value="Financial Institution">Financial Institution</SelectItem>
+                          <SelectItem value="Government Partner">Government Partner</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

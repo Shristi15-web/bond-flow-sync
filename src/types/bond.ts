@@ -1,5 +1,7 @@
 export type BondStatus = 'available' | 'listed' | 'sold' | 'matured';
 
+export type ListerSubType = 'Broker' | 'Custodian' | 'Financial Institution' | 'Government Partner';
+
 export interface Bond {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export interface Bond {
   maturityDate: string;
   custodianId: string;
   description: string;
+  listerSubType?: ListerSubType;
 }
 
 export interface BondPurchase {
