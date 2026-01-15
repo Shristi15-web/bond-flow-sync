@@ -11,14 +11,7 @@ import {
   CheckCircle2, Loader2
 } from "lucide-react";
 
-type Step = 'role' | 'lister-role' | 'auth' | 'authenticating' | 'approved';
-
-const listerRoles = [
-  { role: 'broker' as UserRole, icon: Briefcase, label: 'Broker', desc: 'List bonds for investors' },
-  { role: 'custodian' as UserRole, icon: Shield, label: 'Custodian', desc: 'Verify and settle holdings' },
-  { role: 'financial_institution' as UserRole, icon: Building2, label: 'Financial Institution', desc: 'Issue and manage bonds' },
-  { role: 'government_partner' as UserRole, icon: Landmark, label: 'Government Partner', desc: 'Oversight and compliance' },
-];
+type Step = 'role' | 'auth' | 'authenticating' | 'approved';
 
 const roleLabels: Record<UserRole, string> = {
   investor: 'Investor',
@@ -114,15 +107,10 @@ export default function Login() {
   const handleRoleSelect = (role: 'investor' | 'lister') => {
     if (role === 'investor') {
       setSelectedRole('investor');
-      setStep('auth');
-      setShowRegister(false);
     } else {
-      setStep('lister-role');
+      // Lister goes directly to broker dashboard (unified lister dashboard)
+      setSelectedRole('broker');
     }
-  };
-
-  const handleListerRoleSelect = (role: UserRole) => {
-    setSelectedRole(role);
     setStep('auth');
     setShowRegister(false);
   };
@@ -217,39 +205,11 @@ export default function Login() {
           </div>
         )}
 
-        {/* Step: Lister Role Selection */}
-        {step === 'lister-role' && (
-          <div className="max-w-lg mx-auto space-y-4 animate-slide-up">
-            <button 
-              onClick={() => setStep('role')} 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors duration-300"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            <h2 className="text-2xl font-bold text-center text-foreground mb-6">Select Lister Type</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {listerRoles.map((r) => (
-                <GlowCard 
-                  key={r.role} 
-                  className="cursor-pointer text-center p-5 group transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_25px_hsl(var(--primary)/0.2)]" 
-                  onClick={() => handleListerRoleSelect(r.role)}
-                >
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center group-hover:from-primary/30 group-hover:to-secondary/20 transition-all duration-300">
-                    <r.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground">{r.label}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{r.desc}</p>
-                </GlowCard>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Step: Auth Form */}
         {step === 'auth' && selectedRole && (
           <div className="animate-slide-up max-w-xl mx-auto">
             <button 
-              onClick={() => setStep(selectedRole === 'investor' ? 'role' : 'lister-role')} 
+              onClick={() => setStep('role')} 
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors duration-300"
             >
               <ArrowLeft className="w-4 h-4" /> Back
