@@ -8,10 +8,12 @@ import {
   Settings, 
   LogOut,
   Building2,
-  Shield,
-  Landmark,
   Users,
-  MessageSquare
+  MessageSquare,
+  Plus,
+  Activity,
+  List,
+  User
 } from "lucide-react";
 import { useBondContext } from "@/context/BondContext";
 import { UserRole } from "@/types/bond";
@@ -25,65 +27,40 @@ interface NavItem {
 const navItems: Record<UserRole, NavItem[]> = {
   investor: [
     { label: "Dashboard", href: "/investor", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "Available Bonds", href: "/investor/bonds", icon: <TrendingUp className="w-5 h-5" /> },
+    { label: "Bonds Market", href: "/investor/bonds", icon: <TrendingUp className="w-5 h-5" /> },
     { label: "My Portfolio", href: "/investor/portfolio", icon: <FileText className="w-5 h-5" /> },
     { label: "Wallet", href: "/investor/wallet", icon: <Wallet className="w-5 h-5" /> },
     { label: "Transactions", href: "/investor/transactions", icon: <FileText className="w-5 h-5" /> },
     { label: "Support", href: "/investor/support", icon: <MessageSquare className="w-5 h-5" /> },
   ],
-  broker: [
-    { label: "Dashboard", href: "/broker", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "Create Listing", href: "/broker/create", icon: <TrendingUp className="w-5 h-5" /> },
-    { label: "Listed Bonds", href: "/broker/listings", icon: <FileText className="w-5 h-5" /> },
-    { label: "Active Investors", href: "/broker/investors", icon: <Users className="w-5 h-5" /> },
-    { label: "Investor Demand", href: "/broker/demand", icon: <Users className="w-5 h-5" /> },
-    { label: "Profile", href: "/broker/profile", icon: <Building2 className="w-5 h-5" /> },
-    { label: "Support", href: "/broker/support", icon: <MessageSquare className="w-5 h-5" /> },
-  ],
-  custodian: [
-    { label: "Dashboard", href: "/custodian", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "Custody Holdings", href: "/custodian/holdings", icon: <Shield className="w-5 h-5" /> },
-    { label: "Settlements", href: "/custodian/settlements", icon: <FileText className="w-5 h-5" /> },
-    { label: "Investor View", href: "/custodian/investors", icon: <Users className="w-5 h-5" /> },
-  ],
-  financial_institution: [
-    { label: "Dashboard", href: "/fi", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "Issue Bond", href: "/fi/create", icon: <TrendingUp className="w-5 h-5" /> },
-    { label: "My Bonds", href: "/fi/bonds", icon: <Building2 className="w-5 h-5" /> },
-    { label: "Distribution", href: "/fi/distribution", icon: <FileText className="w-5 h-5" /> },
-  ],
-  government_partner: [
-    { label: "Dashboard", href: "/gov", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "Bond Overview", href: "/gov/bonds", icon: <Landmark className="w-5 h-5" /> },
-    { label: "Investments", href: "/gov/investments", icon: <TrendingUp className="w-5 h-5" /> },
-    { label: "Compliance", href: "/gov/compliance", icon: <Shield className="w-5 h-5" /> },
+  lister: [
+    { label: "Dashboard", href: "/lister", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: "My Listings", href: "/lister/listings", icon: <List className="w-5 h-5" /> },
+    { label: "New Listing", href: "/lister/new-listing", icon: <Plus className="w-5 h-5" /> },
+    { label: "Activity", href: "/lister/activity", icon: <Activity className="w-5 h-5" /> },
+    { label: "Profile", href: "/lister/profile", icon: <User className="w-5 h-5" /> },
+    { label: "Support", href: "/lister/support", icon: <MessageSquare className="w-5 h-5" /> },
   ],
 };
 
 const roleLabels: Record<UserRole, string> = {
   investor: "Investor",
-  broker: "Broker",
-  custodian: "Custodian",
-  financial_institution: "Financial Institution",
-  government_partner: "Government Partner",
+  lister: "Lister",
 };
 
 export function DashboardNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout, investor } = useBondContext();
+  const { currentUser, logout, investor, lister } = useBondContext();
 
   if (!currentUser) return null;
 
   const items = navItems[currentUser.role];
-  const displayName = currentUser.role === 'investor' ? investor.name : roleLabels[currentUser.role];
+  const displayName = currentUser.role === 'investor' ? investor.name : lister.name;
 
   const handleLogout = () => {
-    // Clear session data
     logout();
-    // Clear any stored session flags
     localStorage.removeItem('bondfi_session');
-    // Navigate to landing page
     navigate('/landing');
   };
 
@@ -132,7 +109,7 @@ export function DashboardNav() {
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border space-y-1">
           <Link
-            to={`/${currentUser.role === 'financial_institution' ? 'fi' : currentUser.role === 'government_partner' ? 'gov' : currentUser.role}/settings`}
+            to={`/${currentUser.role}/settings`}
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
               location.pathname.includes('/settings')

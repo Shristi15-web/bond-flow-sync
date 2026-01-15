@@ -15,17 +15,13 @@ import InvestorWallet from "./pages/investor/InvestorWallet";
 import InvestorTransactions from "./pages/investor/InvestorTransactions";
 import InvestorSettings from "./pages/investor/InvestorSettings";
 import InvestorSupport from "./pages/investor/InvestorSupport";
-import BrokerDashboard from "./pages/broker/BrokerDashboard";
-import BrokerProfile from "./pages/broker/BrokerProfile";
-import BrokerSupport from "./pages/broker/BrokerSupport";
-import BrokerListedBonds from "./pages/broker/BrokerListedBonds";
-import BrokerInvestors from "./pages/broker/BrokerInvestors";
-import BrokerDemand from "./pages/broker/BrokerDemand";
-import BrokerCreateListing from "./pages/broker/BrokerCreateListing";
-import BrokerSettings from "./pages/broker/BrokerSettings";
-import CustodianDashboard from "./pages/custodian/CustodianDashboard";
-import FIDashboard from "./pages/fi/FIDashboard";
-import GovDashboard from "./pages/gov/GovDashboard";
+import ListerDashboard from "./pages/lister/ListerDashboard";
+import ListerListings from "./pages/lister/ListerListings";
+import ListerNewListing from "./pages/lister/ListerNewListing";
+import ListerActivity from "./pages/lister/ListerActivity";
+import ListerProfile from "./pages/lister/ListerProfile";
+import ListerSettings from "./pages/lister/ListerSettings";
+import ListerSupport from "./pages/lister/ListerSupport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,21 +45,14 @@ const App = () => (
             <Route path="/investor/transactions" element={<InvestorTransactions />} />
             <Route path="/investor/settings" element={<InvestorSettings />} />
             <Route path="/investor/support" element={<InvestorSupport />} />
-            {/* Broker Routes */}
-            <Route path="/broker" element={<BrokerDashboard />} />
-            <Route path="/broker/create" element={<BrokerCreateListing />} />
-            <Route path="/broker/listings" element={<BrokerListedBonds />} />
-            <Route path="/broker/investors" element={<BrokerInvestors />} />
-            <Route path="/broker/demand" element={<BrokerDemand />} />
-            <Route path="/broker/profile" element={<BrokerProfile />} />
-            <Route path="/broker/support" element={<BrokerSupport />} />
-            <Route path="/broker/settings" element={<BrokerSettings />} />
-            <Route path="/custodian" element={<CustodianDashboard />} />
-            <Route path="/custodian/*" element={<CustodianDashboard />} />
-            <Route path="/fi" element={<FIDashboard />} />
-            <Route path="/fi/*" element={<FIDashboard />} />
-            <Route path="/gov" element={<GovDashboard />} />
-            <Route path="/gov/*" element={<GovDashboard />} />
+            {/* Lister Routes */}
+            <Route path="/lister" element={<ListerDashboard />} />
+            <Route path="/lister/listings" element={<ListerListings />} />
+            <Route path="/lister/new-listing" element={<ListerNewListing />} />
+            <Route path="/lister/activity" element={<ListerActivity />} />
+            <Route path="/lister/profile" element={<ListerProfile />} />
+            <Route path="/lister/settings" element={<ListerSettings />} />
+            <Route path="/lister/support" element={<ListerSupport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
