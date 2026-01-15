@@ -79,19 +79,29 @@ export default function InvestorSecondaryMarket() {
                 const bond = getBondById(listing.bondId);
                 if (!bond) return null;
 
+                // Check if this is the current investor's own listing
+                const isOwnListing = listing.sellerId === investor.id;
+
                 return (
                   <Card 
                     key={listing.id}
-                    className="p-5 bg-gradient-to-br from-card/80 to-card/40 border-border/50 backdrop-blur-sm hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--primary)/0.1)] transition-all duration-300 animate-fade-in"
+                    className={`p-5 bg-gradient-to-br from-card/80 to-card/40 border-border/50 backdrop-blur-sm hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--primary)/0.1)] transition-all duration-300 animate-fade-in ${isOwnListing ? 'ring-1 ring-primary/40' : ''}`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
                         <TrendingUp className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
-                        {listing.yield}% Yield
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {isOwnListing && (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                            Your Listing
+                          </span>
+                        )}
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
+                          {listing.yield}% Yield
+                        </span>
+                      </div>
                     </div>
 
                     <h4 className="font-semibold text-foreground mb-2">{bond.name}</h4>
@@ -112,13 +122,19 @@ export default function InvestorSecondaryMarket() {
                       </div>
                     </div>
 
-                    <GradientButton 
-                      className="w-full"
-                      onClick={() => handleBuyClick(listing.id)}
-                      disabled={investor.balance < listing.sellingPrice}
-                    >
-                      {investor.balance < listing.sellingPrice ? 'Insufficient Balance' : 'Buy Now'}
-                    </GradientButton>
+                    {isOwnListing ? (
+                      <div className="w-full px-4 py-3 rounded-xl bg-muted/30 text-center text-sm text-muted-foreground">
+                        Listed for Sale
+                      </div>
+                    ) : (
+                      <GradientButton 
+                        className="w-full"
+                        onClick={() => handleBuyClick(listing.id)}
+                        disabled={investor.balance < listing.sellingPrice}
+                      >
+                        {investor.balance < listing.sellingPrice ? 'Insufficient Balance' : 'Buy Now'}
+                      </GradientButton>
+                    )}
                   </Card>
                 );
               })}

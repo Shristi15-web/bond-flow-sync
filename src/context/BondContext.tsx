@@ -687,11 +687,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
     b.status === 'listed' && b.approvalStatus === 'approved'
   );
 
-  // Get only listed (not sold) secondary market listings for investors
-  // Filter out: sold listings, own listings, and listings for non-approved bonds
+  // Get ALL listed (not sold) secondary market listings for investors
+  // Include seller's own listings (they will see "Your Listing" label)
+  // Filter out: sold listings and listings for non-approved bonds
   const getSecondaryMarketListingsForInvestors = () => secondaryMarketListings.filter(l => {
     if (l.status !== 'listed') return false;
-    if (l.sellerId === investor.id) return false;
+    // DO NOT filter by sellerId - sellers should see their own listings
     const bond = bonds.find(b => b.id === l.bondId);
     if (!bond || bond.approvalStatus !== 'approved') return false;
     return true;
