@@ -101,10 +101,11 @@ interface BondContextType {
   addStablecoins: (amount: number) => void;
   
   // Actions
-  purchaseBond: (bondId: string, amount: number) => void;
+  purchaseBond: (bondId: string, amount: number) => { success: boolean; error?: string };
   listBond: (bondId: string, config: { minInvestmentUnit: number; availableQuantity: number; listingStartDate: string; listingEndDate: string }) => { success: boolean; error?: string };
   createBond: (bond: Omit<Bond, 'id' | 'createdAt' | 'status' | 'approvalStatus'>) => string;
   approveBond: (bondId: string, approved: boolean) => { success: boolean; error?: string };
+  autoVerifyAndApproveBond: (bondId: string) => void;
   confirmSettlement: (transactionId: string) => void;
   
   // Secondary Market Actions
@@ -120,6 +121,7 @@ interface BondContextType {
   getTransactionsByBond: (bondId: string) => Transaction[];
   hasOverlappingListing: (bondId: string, startDate: string, endDate: string) => boolean;
   getApprovedBondsForInvestors: () => Bond[];
+  getSecondaryMarketListingsForInvestors: () => SecondaryMarketListing[];
 }
 
 const BondContext = createContext<BondContextType | undefined>(undefined);
@@ -278,22 +280,31 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setTransactions(prev => [...prev, newTransaction]);
   };
 
-  const purchaseBond = (bondId: string, amount: number) => {
+  const purchaseBond = (bondId: string, amount: number): { success: boolean; error?: string } => {
     const bond = bonds.find(b => b.id === bondId);
-    if (!bond || bond.availableSupply < amount) return;
+    if (!bond) {
+      return { success: false, error: 'Bond not found' };
+    }
+    
+    if (bond.availableSupply < amount) {
+      return { success: false, error: 'Insufficient bond supply' };
+    }
 
     // Only allow purchasing approved bonds
     if (bond.approvalStatus !== 'approved') {
-      console.warn('Bond is not approved for investment');
-      return;
+      return { success: false, error: 'Bond is not approved for investment' };
     }
 
     // Calculate purchase value - minimum $1 per unit
     const purchaseValue = Math.max(1, bond.minInvestment) * amount;
     
+    // Enforce minimum $1 investment
+    if (purchaseValue < 1) {
+      return { success: false, error: 'Minimum investment is $1' };
+    }
+    
     if (investor.balance < purchaseValue) {
-      console.warn('Insufficient balance');
-      return;
+      return { success: false, error: 'Insufficient balance' };
     }
     
     const expectedReturn = (purchaseValue * bond.yield) / 100;
@@ -360,6 +371,8 @@ export function BondProvider({ children }: { children: ReactNode }) {
       ...prev,
       transactionVolume: prev.transactionVolume + purchaseValue,
     }));
+
+    return { success: true };
   };
 
   const hasOverlappingListing = (bondId: string, startDate: string, endDate: string): boolean => {
@@ -674,6 +687,16 @@ export function BondProvider({ children }: { children: ReactNode }) {
     b.status === 'listed' && b.approvalStatus === 'approved'
   );
 
+  // Get only listed (not sold) secondary market listings for investors
+  // Filter out: sold listings, own listings, and listings for non-approved bonds
+  const getSecondaryMarketListingsForInvestors = () => secondaryMarketListings.filter(l => {
+    if (l.status !== 'listed') return false;
+    if (l.sellerId === investor.id) return false;
+    const bond = bonds.find(b => b.id === l.bondId);
+    if (!bond || bond.approvalStatus !== 'approved') return false;
+    return true;
+  });
+
   // Approve or reject a bond (for admin use)
   const approveBond = (bondId: string, approved: boolean): { success: boolean; error?: string } => {
     const bond = bonds.find(b => b.id === bondId);
@@ -709,6 +732,44 @@ export function BondProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  // Automated verification and approval flow (10 seconds simulation)
+  const autoVerifyAndApproveBond = (bondId: string) => {
+    // Update to "verifying" status immediately
+    setBonds(prev =>
+      prev.map(b =>
+        b.id === bondId
+          ? { ...b, approvalStatus: 'pending' as const }
+          : b
+      )
+    );
+
+    // After 10 seconds, auto-approve the bond
+    setTimeout(() => {
+      setBonds(prev =>
+        prev.map(b =>
+          b.id === bondId
+            ? { ...b, approvalStatus: 'approved' as const, status: 'listed' as const }
+            : b
+        )
+      );
+
+      // Update pending verifications count
+      setComplianceMetrics(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1),
+      }));
+
+      // Update transaction status
+      setTransactions(prev =>
+        prev.map(t =>
+          t.bondId === bondId && t.status === 'pending'
+            ? { ...t, status: 'completed' as const, description: t.description.replace('(Pending Approval)', '(Approved)') }
+            : t
+        )
+      );
+    }, 10000); // 10 seconds
+  };
+
   return (
     <BondContext.Provider
       value={{
@@ -734,6 +795,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         listBond,
         createBond,
         approveBond,
+        autoVerifyAndApproveBond,
         confirmSettlement,
         listBondForSale,
         buyFromSecondaryMarket,
@@ -743,6 +805,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         getTransactionsByBond,
         hasOverlappingListing,
         getApprovedBondsForInvestors,
+        getSecondaryMarketListingsForInvestors,
       }}
     >
       {children}

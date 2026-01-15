@@ -9,15 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 type BuyStep = 'browse' | 'confirm' | 'processing' | 'success';
 
 export default function InvestorSecondaryMarket() {
-  const { secondaryMarketListings, buyFromSecondaryMarket, getBondById, investor } = useBondContext();
+  const { getSecondaryMarketListingsForInvestors, buyFromSecondaryMarket, getBondById, investor } = useBondContext();
   const { toast } = useToast();
   const [step, setStep] = useState<BuyStep>('browse');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
-  const availableListings = secondaryMarketListings.filter(
-    l => l.status === 'listed' && l.sellerId !== investor.id
-  );
+  // Use the filtered function to get only valid listings
+  const availableListings = getSecondaryMarketListingsForInvestors();
 
+  // Use the context's secondaryMarketListings for finding the selected listing
+  const { secondaryMarketListings } = useBondContext();
+  
   const selectedListing = selectedListingId 
     ? secondaryMarketListings.find(l => l.id === selectedListingId) 
     : null;

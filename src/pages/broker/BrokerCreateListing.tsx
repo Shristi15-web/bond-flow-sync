@@ -73,7 +73,7 @@ const initialBondForm: NewBondForm = {
 };
 
 export default function BrokerCreateListing() {
-  const { bonds, listings, listBond, createBond, hasOverlappingListing } = useBondContext();
+  const { bonds, listings, listBond, createBond, hasOverlappingListing, autoVerifyAndApproveBond } = useBondContext();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
@@ -166,7 +166,7 @@ export default function BrokerCreateListing() {
       // Enforce minimum $1 investment
       const minInvestment = Math.max(1, bondForm.minInvestment);
       
-      createBond({
+      const newBondId = createBond({
         name: bondForm.name,
         issuer: bondForm.issuer,
         yield: bondForm.yield,
@@ -181,12 +181,15 @@ export default function BrokerCreateListing() {
         listerSubType: bondForm.listerSubType as ListerSubType,
       });
       
-      setCreatedBondId(`bond-${Date.now()}`);
+      setCreatedBondId(newBondId);
       setCreateStep('created');
       
+      // Trigger automated verification flow (10 seconds)
+      autoVerifyAndApproveBond(newBondId);
+      
       toast({
-        title: "Bond Created Successfully",
-        description: "Your bond has been submitted for approval. Once approved, you can list it for investors.",
+        title: "Bond Submitted for Verification",
+        description: "Verification in progress. Your bond will be auto-approved in ~10 seconds.",
       });
     }, 2000);
   };

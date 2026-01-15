@@ -117,12 +117,13 @@ export default function BrokerListedBonds() {
                       <span className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium",
                         bond.approvalStatus === 'approved' && bond.status === 'listed' ? "bg-success/20 text-success" :
-                        bond.approvalStatus === 'pending' ? "bg-warning/20 text-warning" :
+                        bond.approvalStatus === 'pending' ? "bg-warning/20 text-warning animate-pulse" :
                         bond.approvalStatus === 'rejected' ? "bg-destructive/20 text-destructive" :
                         "bg-muted/20 text-muted-foreground"
                       )}>
                         {bond.approvalStatus === 'approved' && bond.status === 'listed' ? 'Active' :
-                         bond.approvalStatus === 'pending' ? 'Pending Approval' :
+                         bond.approvalStatus === 'approved' ? 'Approved' :
+                         bond.approvalStatus === 'pending' ? 'Verification in Progress' :
                          bond.approvalStatus === 'rejected' ? 'Rejected' :
                          bond.status}
                       </span>
