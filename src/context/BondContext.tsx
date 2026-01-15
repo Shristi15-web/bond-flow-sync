@@ -742,11 +742,19 @@ export function BondProvider({ children }: { children: ReactNode }) {
     // Credit seller's payout balance (simulating other investor)
     setAvailableForPayout(prev => prev + listing.sellingPrice);
 
+    // Determine if this was an early sale (before maturity)
+    const maturityDate = new Date(bond.maturityDate);
+    const now = new Date();
+    const isEarlySale = now < maturityDate;
+    const discountApplied = listing.originalPrice - listing.sellingPrice;
+    
     const saleWalletTx: WalletTransaction = {
       id: `wtx-sale-${Date.now()}`,
       type: 'sale',
       amount: listing.sellingPrice,
-      description: `Sold ${listing.quantity} units of ${bond.name} on secondary market`,
+      description: isEarlySale 
+        ? `Sold ${listing.quantity} units of ${bond.name} (early sale, discount: $${discountApplied.toFixed(2)})`
+        : `Sold ${listing.quantity} units of ${bond.name} on secondary market`,
       timestamp: new Date().toISOString(),
       status: 'completed',
       bondName: bond.name,
