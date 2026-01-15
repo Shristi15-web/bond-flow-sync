@@ -6,10 +6,11 @@ import { GradientButton } from "@/components/ui/gradient-button";
 import { useBondContext } from "@/context/BondContext";
 import { UserRole, DEMO_CREDENTIALS } from "@/types/bond";
 import { useToast } from "@/hooks/use-toast";
+import { generateInvestorTermsPDF } from "@/lib/termsAndConditions";
 import { 
   User, Building2, Shield, Landmark, Briefcase, ArrowLeft, 
   Mail, Lock, Globe, Wallet, FileText, Eye, Hash, MapPin,
-  CheckCircle2, Loader2
+  CheckCircle2, Loader2, Download
 } from "lucide-react";
 
 type Step = 'role' | 'auth' | 'authenticating' | 'approved';
@@ -430,15 +431,25 @@ export default function Login() {
                               </button>
                             </div>
                           </div>
-                          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={termsAgreed}
-                              onChange={(e) => setTermsAgreed(e.target.checked)}
-                              className="w-4 h-4 rounded border-border bg-input accent-primary"
-                            />
-                            I agree to the Terms & Conditions
-                          </label>
+                          <div className="space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => generateInvestorTermsPDF(fullName || 'Investor', regEmail || 'investor@bondfi.com')}
+                              className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors duration-300 hover:underline"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download Terms & Conditions (PDF)
+                            </button>
+                            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={termsAgreed}
+                                onChange={(e) => setTermsAgreed(e.target.checked)}
+                                className="w-4 h-4 rounded border-border bg-input accent-primary"
+                              />
+                              I have read and agree to the Terms & Conditions
+                            </label>
+                          </div>
                         </>
                       )}
 
