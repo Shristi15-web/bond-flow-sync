@@ -22,6 +22,7 @@ export interface UserData {
   walletTransactions: WalletTransaction[];
   bankAccount: BankAccount | null;
   availableForPayout: number;
+  listerBalance: number;
   secondaryMarketListings: SecondaryMarketListing[];
   listings: BondListing[];
 }
@@ -148,6 +149,7 @@ export function initializeUserData(
     walletTransactions: [],
     bankAccount: null,
     availableForPayout: 0,
+    listerBalance: 0,
     secondaryMarketListings: [],
     listings: [],
   };

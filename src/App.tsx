@@ -25,6 +25,7 @@ import BrokerInvestors from "./pages/broker/BrokerInvestors";
 import BrokerDemand from "./pages/broker/BrokerDemand";
 import BrokerCreateListing from "./pages/broker/BrokerCreateListing";
 import BrokerSettings from "./pages/broker/BrokerSettings";
+import BrokerWallet from "./pages/broker/BrokerWallet";
 import CustodianDashboard from "./pages/custodian/CustodianDashboard";
 import FIDashboard from "./pages/fi/FIDashboard";
 import GovDashboard from "./pages/gov/GovDashboard";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/broker/listings" element={<BrokerListedBonds />} />
             <Route path="/broker/investors" element={<BrokerInvestors />} />
             <Route path="/broker/demand" element={<BrokerDemand />} />
+            <Route path="/broker/wallet" element={<BrokerWallet />} />
             <Route path="/broker/profile" element={<BrokerProfile />} />
             <Route path="/broker/support" element={<BrokerSupport />} />
             <Route path="/broker/settings" element={<BrokerSettings />} />
