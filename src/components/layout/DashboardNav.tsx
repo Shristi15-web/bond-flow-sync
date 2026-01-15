@@ -40,6 +40,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Listed Bonds", href: "/broker/listings", icon: <FileText className="w-5 h-5" /> },
     { label: "Active Investors", href: "/broker/investors", icon: <Users className="w-5 h-5" /> },
     { label: "Investor Demand", href: "/broker/demand", icon: <Users className="w-5 h-5" /> },
+    { label: "Wallet", href: "/broker/wallet", icon: <Wallet className="w-5 h-5" /> },
     { label: "Profile", href: "/broker/profile", icon: <Building2 className="w-5 h-5" /> },
     { label: "Support", href: "/broker/support", icon: <MessageSquare className="w-5 h-5" /> },
   ],

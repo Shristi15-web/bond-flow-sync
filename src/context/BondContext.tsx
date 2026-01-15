@@ -102,6 +102,7 @@ interface BondContextType {
   bankAccount: BankAccount | null;
   walletTransactions: WalletTransaction[];
   availableForPayout: number;
+  listerBalance: number;
   
   // Auth
   currentUser: RegisteredUser | null;
@@ -213,6 +214,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
   );
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(userData?.bankAccount || null);
   const [availableForPayout, setAvailableForPayout] = useState<number>(userData?.availableForPayout || 0);
+  const [listerBalance, setListerBalance] = useState<number>(userData?.listerBalance || 0);
   const [listings, setListings] = useState<BondListing[]>(userData?.listings || []);
   
   // For backward compatibility - secondaryMarketListings now points to global
@@ -244,11 +246,12 @@ export function BondProvider({ children }: { children: ReactNode }) {
         walletTransactions,
         bankAccount,
         availableForPayout,
+        listerBalance,
         secondaryMarketListings: [], // Keep empty since we use global
         listings,
       });
     }
-  }, [currentUser, investor, broker, walletTransactions, bankAccount, availableForPayout, listings]);
+  }, [currentUser, investor, broker, walletTransactions, bankAccount, availableForPayout, listerBalance, listings]);
 
   // Demo login (for backward compatibility)
   const login = (role: UserRole) => {
@@ -264,13 +267,25 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setCurrentUser(demoUser);
     setCurrentSession(demoUser);
     
-    // Load demo data
-    setInvestor(initialInvestor);
-    setBroker(initialBroker);
-    setWalletTransactions([]);
-    setBankAccount(null);
-    setAvailableForPayout(0);
-    setListings([]);
+    // Load demo data - try to load from storage first
+    const demoUserData = loadUserData(demoUser.id);
+    if (demoUserData) {
+      setInvestor(demoUserData.investor);
+      setBroker(demoUserData.broker);
+      setWalletTransactions(demoUserData.walletTransactions);
+      setBankAccount(demoUserData.bankAccount);
+      setAvailableForPayout(demoUserData.availableForPayout);
+      setListerBalance(demoUserData.listerBalance || 0);
+      setListings(demoUserData.listings);
+    } else {
+      setInvestor(initialInvestor);
+      setBroker(initialBroker);
+      setWalletTransactions([]);
+      setBankAccount(null);
+      setAvailableForPayout(0);
+      setListerBalance(0);
+      setListings([]);
+    }
   };
 
   // Login with credentials
@@ -300,6 +315,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
       setWalletTransactions(userData.walletTransactions);
       setBankAccount(userData.bankAccount);
       setAvailableForPayout(userData.availableForPayout);
+      setListerBalance(userData.listerBalance || 0);
       setListings(userData.listings);
     }
     
@@ -368,6 +384,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setWalletTransactions([]);
     setBankAccount(null);
     setAvailableForPayout(0);
+    setListerBalance(0);
     setListings([]);
     
     return { success: true, user };
@@ -377,12 +394,13 @@ export function BondProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     clearCurrentSession();
     
-    // Reset to initial state
+    // Reset to initial state (don't clear localStorage - data persists)
     setInvestor(initialInvestor);
     setBroker(initialBroker);
     setWalletTransactions([]);
     setBankAccount(null);
     setAvailableForPayout(0);
+    setListerBalance(0);
     setListings([]);
   };
 
@@ -921,6 +939,7 @@ export function BondProvider({ children }: { children: ReactNode }) {
         bankAccount,
         walletTransactions,
         availableForPayout,
+        listerBalance,
         currentUser,
         login,
         loginWithCredentials,
